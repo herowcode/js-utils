@@ -1,11 +1,5 @@
-// Date utilities
-
-// Array utilities
-export * from "./array/index.js"
-export * from "./date/index.js"
-// Function utilities
-export * from "./function/index.js"
-// Number utilities
-export { randomInt } from "./number.js"
-// String utilities
-export * from "./string/index.js"
+export * from "./array/index.js" // Array utilities
+export * from "./date/index.js" // Date utilities
+export * from "./files/index.js" // Files utilities
+export * from "./function/index.js" // Function utilities
+export * from "./string/index.js" // String utilities
