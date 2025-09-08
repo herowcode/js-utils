@@ -91,12 +91,6 @@ jobs:
         
       - name: Build package
         run: yarn build
-        
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: dist/
 
   publish:
     name: Publish to NPM
