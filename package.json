@@ -63,7 +63,10 @@
     "typescript",
     "dayjs"
   ],
-  "author": "HerowCode",
+  "author": {
+    "name": "Judson Junior",
+    "email": "judson.junior@herowcode.com"
+  },
   "license": "MIT",
   "dependencies": {
     "dayjs": "^1.11.10"
@@ -77,10 +80,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/herowcode/utils.git"
+    "url": "git+https://github.com/herowcode/js-utils.git"
   },
   "bugs": {
-    "url": "https://github.com/herowcode/utils/issues"
+    "url": "https://github.com/herowcode/js-utils/issues"
   },
-  "homepage": "https://github.com/herowcode/utils#readme"
+  "homepage": "https://github.com/herowcode/js-utils#readme"
 }

@@ -37,9 +37,9 @@ jobs:
         run: yarn build
         
       - name: Publish to npm
-        run: yarn npm publish --access public
+        run: npm publish --access public
         env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           
       - name: Create GitHub Release
         uses: actions/create-release@v1
