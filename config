@@ -1,0 +1,11 @@
+#Default GitHub 
+Host github.com
+  HostName github.com
+  User judsonjuniorr
+  IdentityFile ~/.ssh/id_ed25519_personal
+
+Host github.com-work
+  HostName github.com
+  User herowcode
+  IdentityFile ~/.ssh/id_ed25519_work
+
