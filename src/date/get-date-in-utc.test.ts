@@ -1,4 +1,4 @@
-import { getDateInUTC } from "./getDateInUTC"
+import { getDateInUTC } from "./get-date-in-utc"
 
 describe("getDateInUTC", () => {
   const testDate = new Date("2023-12-25T15:30:45.123Z")

@@ -1,4 +1,4 @@
-import { fixTimezoneOffset } from "./fixTimezoneOffset"
+import { fixTimezoneOffset } from "./fix-timezone-offset"
 
 interface ILocaleTranslations {
   year: { singular: string; plural: string }

@@ -1,4 +1,4 @@
-import { formatDate } from "./formatDate"
+import { formatDate } from "./format-date"
 
 describe("formatDate", () => {
   const testDate = new Date("2023-12-25T10:30:00Z")

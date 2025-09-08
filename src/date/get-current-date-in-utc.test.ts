@@ -1,5 +1,5 @@
 import { dayjs } from "./dayjs"
-import { getCurrentDateInUTC } from "./getCurrentDateInUTC"
+import { getCurrentDateInUTC } from "./get-current-date-in-utc"
 
 describe("getCurrentDateInUTC", () => {
   it("should return current date in UTC", () => {
