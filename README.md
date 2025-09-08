@@ -51,133 +51,162 @@ const debouncedFn = debounce(() => console.log('Called!'), 300);
 
 ## API Reference
 
+### Array Utilities
+
+#### `shuffle<T>(array: T[]): T[]`
+Returns a new array with the elements shuffled in random order.
+
+```typescript
+shuffle([1, 2, 3, 4]); // e.g., [3, 1, 4, 2]
+```
+
+#### `unique<T>(array: T[]): T[]`
+Removes duplicate values from an array, preserving the first occurrence.
+
+```typescript
+unique([1, 2, 2, 3, 1]); // [1, 2, 3]
+```
+
 ### Date Utilities
 
-#### `formatDate(date: Date, format: string): string`
-
-Formats a date according to the specified format.
-
-**Supported format tokens:**
-- `YYYY` - 4-digit year
-- `YY` - 2-digit year
-- `MM` - 2-digit month (01-12)
-- `DD` - 2-digit day (01-31)
-- `HH` - 2-digit hours (00-23)
-- `mm` - 2-digit minutes (00-59)
-- `ss` - 2-digit seconds (00-59)
+#### `formatDate(date: Date | string | number, locale?: string, opts?: Intl.DateTimeFormatOptions): string`
+Formats a date using the specified locale and options.
 
 ```typescript
-formatDate(new Date('2023-12-25'), 'YYYY-MM-DD'); // "2023-12-25"
-formatDate(new Date('2023-12-25'), 'DD/MM/YYYY'); // "25/12/2023"
-formatDate(new Date('2023-12-25T10:30:45'), 'DD/MM/YYYY HH:mm:ss'); // "25/12/2023 10:30:45"
+formatDate(new Date('2023-12-25'), 'en-US'); // "December 25, 2023"
 ```
 
-#### `addDays(date: Date, amount: number): Date`
-
-Adds a specified number of days to a date. Returns a new Date object.
+#### `fixTimezoneOffset(utcDate: Date | string): Dayjs`
+Adjusts a UTC date string or Date object for the local timezone offset.
 
 ```typescript
-const date = new Date('2023-12-25');
-addDays(date, 5); // 2023-12-30
-addDays(date, -5); // 2023-12-20
+fixTimezoneOffset('2025-09-08T12:00:00Z');
 ```
 
-#### `diffInDays(date1: Date, date2: Date): number`
-
-Calculates the difference in days between two dates.
+#### `getCurrentDateInUTC(): Dayjs`
+Returns the current date/time as a Dayjs object in UTC.
 
 ```typescript
-const date1 = new Date('2023-12-30');
-const date2 = new Date('2023-12-25');
-diffInDays(date1, date2); // 5
-diffInDays(date2, date1); // -5
+getCurrentDateInUTC();
 ```
 
-#### `isBefore(date1: Date, date2: Date): boolean`
-
-Checks if the first date is before the second date.
+#### `getDateInUTC(date: Date): Dayjs`
+Converts a Date to a Dayjs object in UTC.
 
 ```typescript
-const date1 = new Date('2023-12-20');
-const date2 = new Date('2023-12-25');
-isBefore(date1, date2); // true
-isBefore(date2, date1); // false
+getDateInUTC(new Date());
 ```
 
-#### `isAfter(date1: Date, date2: Date): boolean`
-
-Checks if the first date is after the second date.
+#### `parseTimeSpent(initialDate: string | Date, finalDate: string | Date, locale?: string): string`
+Returns a human-readable string describing the time difference between two dates, localized.
 
 ```typescript
-const date1 = new Date('2023-12-30');
-const date2 = new Date('2023-12-25');
-isAfter(date1, date2); // true
-isAfter(date2, date1); // false
+parseTimeSpent('2020-01-01', '2022-04-16', 'en-US'); // "2 years, 3 months, and 15 days"
 ```
 
-### String Utilities
+### Files Utilities
 
-#### `capitalize(str: string): string`
-
-Capitalizes the first letter of a string and converts the rest to lowercase.
+#### `compressImage({ file, maxWidth, maxHeight, quality, allowedFileTypes }): Promise<File>`
+Compresses an image file to WebP format, optionally resizing and restricting file types.
 
 ```typescript
-capitalize('hello world'); // "Hello world"
-capitalize('HELLO WORLD'); // "Hello world"
-capitalize('hELLo WoRLd'); // "Hello world"
+await compressImage({ file, maxWidth: 800, maxHeight: 600, quality: 0.8 });
 ```
 
-#### `camelCase(str: string): string`
-
-Converts a string to camelCase by removing special characters and capitalizing words.
+#### `downloadUrl(url: string): Promise<boolean>`
+Downloads a file from a URL in the browser, returning true if successful.
 
 ```typescript
-camelCase('hello world'); // "helloWorld"
-camelCase('hello-world'); // "helloWorld"
-camelCase('hello_world_test'); // "helloWorldTest"
-camelCase('The Quick Brown Fox'); // "theQuickBrownFox"
+await downloadUrl('https://example.com/file.pdf');
 ```
 
-### Number Utilities
-
-#### `randomInt(min: number, max: number): number`
-
-Generates a random integer between min and max (inclusive).
+#### `formatBytes(bytes: number): string`
+Formats a byte count as a human-readable string (e.g., "1.23 MB").
 
 ```typescript
-randomInt(1, 10); // Random integer between 1 and 10
-randomInt(0, 100); // Random integer between 0 and 100
-randomInt(-5, 5); // Random integer between -5 and 5
+formatBytes(1234567); // "1.18 MB"
 ```
 
 ### Function Utilities
 
-#### `debounce<T>(fn: T, delay: number): T`
-
-Creates a debounced function that delays invoking `fn` until after `delay` milliseconds have elapsed since the last time it was invoked.
+#### `debounce<T>(fn: T, delay: number): (...args: Parameters<T>) => void`
+Creates a debounced function that delays invoking `fn` until after `delay` ms have elapsed since the last call.
 
 ```typescript
-const debouncedSearch = debounce((query: string) => {
-  console.log('Searching for:', query);
-}, 300);
-
-// Will only execute once after 300ms of no new calls
-debouncedSearch('a');
-debouncedSearch('ab');
-debouncedSearch('abc'); // Only this will execute
+const debounced = debounce(() => { /* ... */ }, 300);
 ```
 
-#### `throttle<T>(fn: T, delay: number): T`
-
-Creates a throttled function that only invokes `fn` at most once per every `delay` milliseconds.
+#### `throttle<T>(fn: T, delay: number): (...args: Parameters<T>) => void`
+Creates a throttled function that only invokes `fn` at most once per `delay` ms.
 
 ```typescript
-const throttledScroll = throttle(() => {
-  console.log('Scroll event handled');
-}, 100);
+const throttled = throttle(() => { /* ... */ }, 100);
+```
 
-// Will execute immediately, then at most once every 100ms
-window.addEventListener('scroll', throttledScroll);
+#### `tryCatch<T, E = Error, D = null>(fn: Promise<T> | (() => Promise<T> | T), defaultData?: D): Promise<{ data: T | D; error: E | null }>`
+Executes a function or promise and returns an object with `data` or `error`.
+
+```typescript
+const result = await tryCatch(() => fetchData());
+if (result.error) { /* handle error */ }
+```
+
+### String Utilities
+
+#### `camelCase(str: string): string`
+Converts a string to camelCase.
+
+```typescript
+camelCase('hello world'); // "helloWorld"
+```
+
+#### `capitalize(str: string): string`
+Capitalizes the first letter and lowercases the rest.
+
+```typescript
+capitalize('hELLO'); // "Hello"
+```
+
+#### `kebabCase(str: string): string`
+Converts a string to kebab-case.
+
+```typescript
+kebabCase('Hello World'); // "hello-world"
+```
+
+#### `removeHtmlTags(input: string): string`
+Removes all HTML tags from a string.
+
+```typescript
+removeHtmlTags('<p>Hello</p>'); // "Hello"
+```
+
+#### `slugify(text: string): string`
+Converts a string to a URL-friendly slug.
+
+```typescript
+slugify('Hello World!'); // "hello-world"
+```
+
+#### `snakeCase(str: string): string`
+Converts a string to snake_case.
+
+```typescript
+snakeCase('Hello World'); // "hello_world"
+```
+
+#### `toSentenceCase(str: string): string`
+Converts a string to sentence case.
+
+```typescript
+toSentenceCase('helloWorld'); // "Hello world"
+```
+
+#### `truncate(str: string, length: number, suffix = "..."): string`
+Truncates a string to a specified length, appending a suffix if truncated.
+
+```typescript
+truncate('Hello world', 5); // "He..."
 ```
 
 ## Browser Support
@@ -213,12 +242,3 @@ MIT © [HerowCode](https://github.com/herowcode)
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Changelog
-
-### 1.0.0
-- Initial release
-- Date utilities: `formatDate`, `addDays`, `diffInDays`, `isBefore`, `isAfter`
-- String utilities: `capitalize`, `camelCase`
-- Number utilities: `randomInt`
-- Function utilities: `debounce`, `throttle`
