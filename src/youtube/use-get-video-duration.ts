@@ -2,6 +2,7 @@
 import { useCallback } from "react"
 import { formatSecondsToHMS } from "../string"
 import { extractYouTubeId } from "./extract-youtube-video-id"
+import { validateYoutubeLink } from "./validate-youtube-link"
 
 let YtApiLoading: Promise<void> | null = null
 
@@ -47,6 +48,9 @@ export function useGetYoutubeVideoDuration() {
     async (videoUrl: string): Promise<string | null> => {
       const videoId = extractYouTubeId(videoUrl)
       if (!videoId) return null
+
+      const videoIsValid = await validateYoutubeLink(videoUrl)
+      if (!videoIsValid) return null
 
       try {
         await loadYouTubeIFrameAPI()
