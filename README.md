@@ -337,10 +337,23 @@ function VideoComponent() {
 #### `validateYoutubeLink(videoUrl: string): Promise<boolean>`
 Checks whether a YouTube video exists by probing thumbnails and falling back to the oEmbed endpoint. Returns `true` for found/public videos and `false` otherwise.
 
-```typescript
+```ts
 const ok = await validateYoutubeLink('https://youtu.be/dQw4w9WgXcQ');
 // true | false
 ```
+
+#### `getYoutubeThumbnail(videoUrl: string): Promise<string | null>`
+Attempts to load YouTube thumbnail images in priority order (maxresdefault, hqdefault, mqdefault, default). It creates an Image in the browser and returns the first URL that successfully loads, or `null` if none are available or the video ID cannot be extracted.
+
+Example:
+```ts
+const thumb = await getYoutubeThumbnail('https://youtu.be/abc123');
+// e.g. "https://img.youtube.com/vi/abc123/hqdefault.jpg" or null
+```
+
+Notes:
+- Uses the browser Image load/error events to avoid CORS issues.
+- Returns `null` when the video ID cannot be extracted or no thumbnails load.
 
 ## Browser Support
 
