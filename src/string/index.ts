@@ -1,5 +1,7 @@
 export * from "./camel-case"
 export * from "./capitalize"
+export * from "./format-seconds-to-hms"
+export * from "./format-string-to-time"
 export * from "./kebab-case"
 export * from "./remove-html-tags"
 export * from "./slugify"

@@ -202,6 +202,23 @@ Converts a string to sentence case.
 toSentenceCase('helloWorld'); // "Hello world"
 ```
 
+#### `formatSecondsToHMS(totalSeconds: number): string`
+Formats a number of seconds into an HH:MM:SS string, rounding and clamping negatives to zero.
+
+```typescript
+formatSecondsToHMS(3661); // "01:01:01"
+formatSecondsToHMS(5); // "00:05"
+```
+
+#### `formatStringToTime(str: string): string`
+Parses a numeric time string (or a string containing digits) into MM:SS or HH:MM:SS format. Non-digits are removed before formatting. Short inputs are zero-padded.
+
+```typescript
+formatStringToTime('123'); // "01:23"
+formatStringToTime('12345'); // "01:23:45"
+formatStringToTime(' 12:34 '); // "12:34"
+```
+
 #### `truncate(str: string, length: number, suffix = "..."): string`
 Truncates a string to a specified length, appending a suffix if truncated.
 
