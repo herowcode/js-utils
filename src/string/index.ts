@@ -1,5 +1,7 @@
 export * from "./camel-case"
 export * from "./capitalize"
+export * from "./format-hms-to-seconds"
+export * from "./format-seconds-to-fragment"
 export * from "./format-seconds-to-hms"
 export * from "./format-string-to-time"
 export * from "./kebab-case"

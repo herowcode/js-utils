@@ -1,6 +1,6 @@
 # @herowcode/utils
 
-A lightweight collection of utility functions for everyday JavaScript/TypeScript development. Built with dayjs for powerful date manipulation.
+A lightweight collection of utility functions for everyday JavaScript/TypeScript development. Built with dayjs for powerful date manipulation and React hooks for YouTube integration.
 
 ## Features
 
@@ -10,6 +10,7 @@ A lightweight collection of utility functions for everyday JavaScript/TypeScript
 - 📱 **Universal** - Works in Node.js and browsers
 - 🎯 **Tree-shakable** - Only import what you need
 - 📂 **Scoped exports** - Import from specific modules
+- 🎥 **YouTube utilities** - Extract video IDs, generate URLs, and get video durations
 
 ## Installation
 
@@ -23,7 +24,7 @@ yarn add @herowcode/utils
 
 ### Import everything:
 ```typescript
-import { formatDate, capitalize, debounce } from '@herowcode/utils';
+import { formatDate, capitalize, debounce, extractYouTubeId } from '@herowcode/utils';
 ```
 
 ### Import by scope:
@@ -32,6 +33,7 @@ import { formatDate, addDays } from '@herowcode/utils/date';
 import { capitalize, camelCase } from '@herowcode/utils/string';
 import { randomInt } from '@herowcode/utils/number';
 import { debounce, throttle } from '@herowcode/utils/function';
+import { extractYouTubeId, generateYoutubeURL } from '@herowcode/utils/youtube';
 ```
 
 ### Examples:
@@ -47,6 +49,14 @@ console.log(kebabCase('helloWorld')); // "hello-world"
 
 // Function utilities
 const debouncedFn = debounce(() => console.log('Called!'), 300);
+
+// YouTube utilities
+const videoId = extractYouTubeId('https://youtu.be/dQw4w9WgXcQ'); // "dQw4w9WgXcQ"
+const embedUrl = generateYoutubeURL({ 
+  videoURL: 'https://youtu.be/abc123', 
+  embed: true, 
+  autoplay: true 
+}); // "https://www.youtube.com/embed/abc123?autoplay=1"
 ```
 
 ## API Reference
@@ -167,6 +177,41 @@ Capitalizes the first letter and lowercases the rest.
 capitalize('hELLO'); // "Hello"
 ```
 
+#### `formatHMSToSeconds(val?: number | string): number | null`
+Converts HMS time format or numeric strings to seconds. Supports formats like "90", "01:30", "1:02:03".
+
+```typescript
+formatHMSToSeconds("1:30"); // 90
+formatHMSToSeconds("1:02:03"); // 3723
+formatHMSToSeconds(120); // 120
+```
+
+#### `formatSecondsToFragment(secs: number): string`
+Converts seconds to YouTube-style fragment format (e.g., "1h2m3s").
+
+```typescript
+formatSecondsToFragment(3723); // "1h2m3s"
+formatSecondsToFragment(90); // "1m30s"
+formatSecondsToFragment(42); // "42s"
+```
+
+#### `formatSecondsToHMS(totalSeconds: number): string`
+Formats a number of seconds into an HH:MM:SS string, rounding and clamping negatives to zero.
+
+```typescript
+formatSecondsToHMS(3661); // "01:01:01"
+formatSecondsToHMS(5); // "00:05"
+```
+
+#### `formatStringToTime(str: string): string`
+Parses a numeric time string (or a string containing digits) into MM:SS or HH:MM:SS format. Non-digits are removed before formatting. Short inputs are zero-padded.
+
+```typescript
+formatStringToTime('123'); // "01:23"
+formatStringToTime('12345'); // "01:23:45"
+formatStringToTime(' 12:34 '); // "12:34"
+```
+
 #### `kebabCase(str: string): string`
 Converts a string to kebab-case.
 
@@ -202,23 +247,6 @@ Converts a string to sentence case.
 toSentenceCase('helloWorld'); // "Hello world"
 ```
 
-#### `formatSecondsToHMS(totalSeconds: number): string`
-Formats a number of seconds into an HH:MM:SS string, rounding and clamping negatives to zero.
-
-```typescript
-formatSecondsToHMS(3661); // "01:01:01"
-formatSecondsToHMS(5); // "00:05"
-```
-
-#### `formatStringToTime(str: string): string`
-Parses a numeric time string (or a string containing digits) into MM:SS or HH:MM:SS format. Non-digits are removed before formatting. Short inputs are zero-padded.
-
-```typescript
-formatStringToTime('123'); // "01:23"
-formatStringToTime('12345'); // "01:23:45"
-formatStringToTime(' 12:34 '); // "12:34"
-```
-
 #### `truncate(str: string, length: number, suffix = "..."): string`
 Truncates a string to a specified length, appending a suffix if truncated.
 
@@ -226,12 +254,94 @@ Truncates a string to a specified length, appending a suffix if truncated.
 truncate('Hello world', 5); // "He..."
 ```
 
+### YouTube Utilities
+
+#### `extractYouTubeId(urlString: string | null): string | null`
+Extracts the video ID from various YouTube URL formats.
+
+```typescript
+extractYouTubeId('https://youtu.be/dQw4w9WgXcQ'); // "dQw4w9WgXcQ"
+extractYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'); // "dQw4w9WgXcQ"
+extractYouTubeId('https://www.youtube.com/embed/dQw4w9WgXcQ'); // "dQw4w9WgXcQ"
+extractYouTubeId('invalid-url'); // null
+```
+
+#### `generateYoutubeURL(options: TCreateYoutubeLinkOptions): string | null`
+Generates YouTube URLs with various options for watch, embed, or short formats.
+
+```typescript
+// Basic watch URL
+generateYoutubeURL({ videoURL: 'https://youtu.be/abc123' });
+// "https://www.youtube.com/watch?v=abc123"
+
+// Embed URL with autoplay
+generateYoutubeURL({ 
+  videoURL: 'https://youtu.be/abc123', 
+  embed: true, 
+  autoplay: true 
+});
+// "https://www.youtube.com/embed/abc123?autoplay=1"
+
+// Short URL with timestamp
+generateYoutubeURL({ 
+  videoURL: 'https://youtu.be/abc123', 
+  short: true, 
+  start: "1:30" 
+});
+// "https://youtu.be/abc123?t=90"
+
+// URL with fragment timestamp
+generateYoutubeURL({ 
+  videoURL: 'https://youtu.be/abc123', 
+  start: "1:30", 
+  useFragment: true 
+});
+// "https://www.youtube.com/watch?v=abc123#t=1m30s"
+```
+
+**Options:**
+- `videoURL` (required): YouTube URL to process
+- `start`/`end`: Start/end times as seconds (number) or HMS strings ("90", "01:30", "1:02:03")
+- `embed`: Generate embed URL format
+- `short`: Generate youtu.be short URL format
+- `useFragment`: Use #t=1m2s style fragment for timestamps
+- `autoplay`, `controls`, `rel`, `loop`, `mute`, `modestbranding`: Player options
+- `origin`, `playlist`: Additional parameters
+- `params`: Custom query parameters
+
+#### `useGetYoutubeVideoDuration(): (videoUrl: string) => Promise<string | null>`
+React hook that returns a function to get YouTube video duration using the YouTube IFrame API.
+
+```typescript
+import { useGetYoutubeVideoDuration } from '@herowcode/utils/youtube';
+
+function VideoComponent() {
+  const getVideoDuration = useGetYoutubeVideoDuration();
+  
+  const handleGetDuration = async () => {
+    const duration = await getVideoDuration('https://youtu.be/dQw4w9WgXcQ');
+    console.log(duration); // "03:32" or null if failed
+  };
+  
+  return <button onClick={handleGetDuration}>Get Duration</button>;
+}
+```
+
+**Features:**
+- Automatically loads YouTube IFrame API if not present
+- Creates offscreen iframe for duration detection
+- Handles retry logic for videos that don't immediately report duration
+- 10-second timeout with automatic cleanup
+- Returns formatted duration string (HH:MM:SS) or null on failure
+
 ## Browser Support
 
 This library supports all modern browsers and Node.js environments. It uses ES2018 features and requires:
 
 - Node.js 10+
 - Modern browsers (Chrome 63+, Firefox 58+, Safari 12+, Edge 79+)
+
+The YouTube utilities require a browser environment with DOM support.
 
 ## Development
 
