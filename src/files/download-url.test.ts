@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { downloadUrl } from "./download-url"
 
 describe("downloadUrl", () => {
@@ -9,31 +10,31 @@ describe("downloadUrl", () => {
 
   beforeEach(() => {
     // Mock fetch to return a blob
-    global.fetch = jest.fn().mockResolvedValue({
-      blob: jest
+    global.fetch = vi.fn().mockResolvedValue({
+      blob: vi
         .fn()
         .mockResolvedValue(new Blob(["test content"], { type: "text/plain" })),
       // biome-ignore lint/suspicious/noExplicitAny: fetch mock
     }) as any
 
     // Mock <a> element and its click
-    document.createElement = jest.fn().mockImplementation((tag: string) => {
+    document.createElement = vi.fn().mockImplementation((tag: string) => {
       if (tag === "a") {
         return {
           href: "",
           download: "",
-          click: jest.fn(),
+          click: vi.fn(),
         }
       }
       return originalCreateElement.call(document, tag)
     })
 
     // Mock appendChild and removeChild
-    document.body.appendChild = jest.fn()
-    document.body.removeChild = jest.fn()
+    document.body.appendChild = vi.fn()
+    document.body.removeChild = vi.fn()
 
     // Mock createObjectURL
-    window.URL.createObjectURL = jest.fn().mockReturnValue("blob:url")
+    window.URL.createObjectURL = vi.fn().mockReturnValue("blob:url")
   })
 
   afterEach(() => {
@@ -42,7 +43,7 @@ describe("downloadUrl", () => {
     document.body.appendChild = originalAppendChild
     document.body.removeChild = originalRemoveChild
     window.URL.createObjectURL = originalCreateObjectURL
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it("downloads a file with the correct filename", async () => {
@@ -59,7 +60,7 @@ describe("downloadUrl", () => {
 
   it("returns false and logs error if URL does not contain a filename", async () => {
     const url = "https://example.com/files"
-    const consoleErrorSpy = jest
+    const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {})
 
@@ -76,9 +77,9 @@ describe("downloadUrl", () => {
   })
 
   it("returns false and logs error if fetch fails", async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error("Network error"))
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
     const url = "https://example.com/files/test.txt"
-    const consoleErrorSpy = jest
+    const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {})
 

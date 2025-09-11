@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { formatHMSToSeconds } from "./format-hms-to-seconds"
 
 describe("formatHMSToSeconds", () => {

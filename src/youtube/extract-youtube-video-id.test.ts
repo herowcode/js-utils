@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { extractYouTubeId } from "./extract-youtube-video-id"
 
 describe("extractYouTubeId", () => {

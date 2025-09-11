@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { snakeCase } from "./snake-case"
 
 describe("snakeCase", () => {

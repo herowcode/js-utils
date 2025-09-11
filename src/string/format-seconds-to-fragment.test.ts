@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { formatSecondsToFragment } from "./format-seconds-to-fragment"
 
 describe("formatSecondsToFragment", () => {

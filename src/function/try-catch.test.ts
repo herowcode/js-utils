@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { type TTryCatchResult, tryCatch } from "./try-catch"
 
 describe("tryCatch", () => {

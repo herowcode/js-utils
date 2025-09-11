@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { parseTimeSpent } from "./parse-time-spent"
 
 describe("parseTimeSpent", () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it("should return formatted time spent in the default locale (pt-BR)", () => {

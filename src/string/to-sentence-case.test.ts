@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { toSentenceCase } from "./to-sentence-case"
 
 describe("toSentenceCase", () => {

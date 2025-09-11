@@ -56,7 +56,7 @@ jobs:
         run: yarn install --immutable
         
       - name: Run tests
-        run: yarn test
+        run: yarn test:run
         
       - name: Run tests with coverage
         run: yarn test:coverage

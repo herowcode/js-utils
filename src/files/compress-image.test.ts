@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: Manipulation of global functions */
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { compressImage } from "./compress-image"
 
 describe("compressImage", () => {
@@ -12,13 +13,13 @@ describe("compressImage", () => {
 
   beforeAll(() => {
     originalCreateElement = document.createElement
-    document.createElement = jest.fn().mockImplementation((tag: string) => {
+    document.createElement = vi.fn().mockImplementation((tag: string) => {
       if (tag === "canvas") {
         return {
           width: 0,
           height: 0,
-          getContext: jest.fn().mockReturnValue({
-            drawImage: jest.fn(),
+          getContext: vi.fn().mockReturnValue({
+            drawImage: vi.fn(),
           }),
           toBlob: (
             cb: (blob: Blob | null) => void,
@@ -38,7 +39,7 @@ describe("compressImage", () => {
       public onload:
         | ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
         | null = null
-      public readAsDataURL = jest.fn(() => {
+      public readAsDataURL = vi.fn(() => {
         setTimeout(() => {
           if (this.onload) {
             this.onload.call(
@@ -138,12 +139,12 @@ describe("compressImage", () => {
   it("rejects if canvas context is null", async () => {
     // Override canvas mock to return null context
     const prevCreateElement = document.createElement
-    document.createElement = jest.fn().mockImplementation((tag: string) => {
+    document.createElement = vi.fn().mockImplementation((tag: string) => {
       if (tag === "canvas") {
         return {
           width: 0,
           height: 0,
-          getContext: jest.fn().mockReturnValue(null),
+          getContext: vi.fn().mockReturnValue(null),
         }
       }
       return prevCreateElement.call(document, tag)
@@ -175,13 +176,13 @@ describe("compressImage", () => {
   it("rejects if toBlob returns null", async () => {
     // Override canvas mock to return null blob
     const prevCreateElement = document.createElement
-    document.createElement = jest.fn().mockImplementation((tag: string) => {
+    document.createElement = vi.fn().mockImplementation((tag: string) => {
       if (tag === "canvas") {
         return {
           width: 0,
           height: 0,
-          getContext: jest.fn().mockReturnValue({
-            drawImage: jest.fn(),
+          getContext: vi.fn().mockReturnValue({
+            drawImage: vi.fn(),
           }),
           toBlob: (cb: (blob: Blob | null) => void) => {
             cb(null)

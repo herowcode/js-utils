@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { removeHtmlTags } from "./remove-html-tags"
 
 describe("removeHtmlTags", () => {

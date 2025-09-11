@@ -1,15 +1,16 @@
+import { describe, expect, it } from "vitest"
 import { generateYoutubeURL } from "./generate-youtube-url"
 
 describe("generateYoutubeURL", () => {
   const watchUrl = "https://www.youtube.com/watch?v=abc123"
   const shortUrl = "https://youtu.be/abc123"
 
-  test("returns null for non-youtube URL", () => {
+  it("returns null for non-youtube URL", () => {
     const res = generateYoutubeURL({ videoURL: "https://example.com" })
     expect(res).toBeNull()
   })
 
-  test("creates standard watch link when no options", () => {
+  it("creates standard watch link when no options", () => {
     const res = generateYoutubeURL({ videoURL: watchUrl })
     expect(res).not.toBeNull()
     const url = new URL(res as string)
@@ -19,7 +20,7 @@ describe("generateYoutubeURL", () => {
     expect(url.hash).toBe("")
   })
 
-  test("creates standard watch link from short URL when no options", () => {
+  it("creates standard watch link from short URL when no options", () => {
     const res = generateYoutubeURL({ videoURL: shortUrl })
     expect(res).not.toBeNull()
     const url = new URL(res as string)
@@ -29,7 +30,7 @@ describe("generateYoutubeURL", () => {
     expect(url.hash).toBe("")
   })
 
-  test("short link uses 't' query param for start when not using fragment", () => {
+  it("short link uses 't' query param for start when not using fragment", () => {
     const res = generateYoutubeURL({
       videoURL: shortUrl,
       short: true,
@@ -43,7 +44,7 @@ describe("generateYoutubeURL", () => {
     expect(url.hash).toBe("")
   })
 
-  test("watch URL uses 'start' query param for start when not using fragment", () => {
+  it("watch URL uses 'start' query param for start when not using fragment", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       start: 90,
@@ -57,7 +58,7 @@ describe("generateYoutubeURL", () => {
     expect(url.hash).toBe("")
   })
 
-  test("useFragment produces #t=... fragment (formatted) and no start query", () => {
+  it("useFragment produces #t=... fragment (formatted) and no start query", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       start: "1:02",
@@ -72,7 +73,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("t")).toBeNull()
   })
 
-  test("embed URL structure", () => {
+  it("embed URL structure", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       embed: true,
@@ -84,7 +85,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("v")).toBeNull() // embed URLs don't use v param
   })
 
-  test("embed + loop sets loop=1 and playlist=VIDEO_ID when playlist not provided", () => {
+  it("embed + loop sets loop=1 and playlist=VIDEO_ID when playlist not provided", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       embed: true,
@@ -98,7 +99,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("playlist")).toBe("abc123")
   })
 
-  test("explicit playlist is preserved when provided with loop", () => {
+  it("explicit playlist is preserved when provided with loop", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       embed: true,
@@ -111,7 +112,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("playlist")).toBe("mylist123")
   })
 
-  test("custom params override built-in params", () => {
+  it("custom params override built-in params", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       autoplay: true, // will set autoplay=1
@@ -123,7 +124,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("foo")).toBe("bar")
   })
 
-  test("end time accepts H:M:S and becomes seconds", () => {
+  it("end time accepts H:M:S and becomes seconds", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       end: "02:00",
@@ -133,7 +134,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("end")).toBe("120")
   })
 
-  test("start time string formats work correctly", () => {
+  it("start time string formats work correctly", () => {
     // Test MM:SS format
     const res1 = generateYoutubeURL({
       videoURL: watchUrl,
@@ -153,7 +154,7 @@ describe("generateYoutubeURL", () => {
     expect(url2.searchParams.get("start")).toBe("3723")
   })
 
-  test("autoplay parameter works correctly", () => {
+  it("autoplay parameter works correctly", () => {
     const res1 = generateYoutubeURL({
       videoURL: watchUrl,
       autoplay: true,
@@ -171,7 +172,7 @@ describe("generateYoutubeURL", () => {
     expect(url2.searchParams.get("autoplay")).toBe("0")
   })
 
-  test("controls parameter works correctly", () => {
+  it("controls parameter works correctly", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       controls: 0,
@@ -181,7 +182,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("controls")).toBe("0")
   })
 
-  test("mute parameter works correctly", () => {
+  it("mute parameter works correctly", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       mute: true,
@@ -191,7 +192,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("mute")).toBe("1")
   })
 
-  test("origin parameter works correctly", () => {
+  it("origin parameter works correctly", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       embed: true,
@@ -202,7 +203,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("origin")).toBe("https://example.com")
   })
 
-  test("useFragment works with short URLs", () => {
+  it("useFragment works with short URLs", () => {
     const res = generateYoutubeURL({
       videoURL: shortUrl,
       short: true,
@@ -217,7 +218,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("t")).toBeNull() // no query param when using fragment
   })
 
-  test("loop without embed sets loop parameter but not playlist", () => {
+  it("loop without embed sets loop parameter but not playlist", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       loop: true,
@@ -228,7 +229,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("playlist")).toBeNull() // only set for embed
   })
 
-  test("playlist parameter without loop", () => {
+  it("playlist parameter without loop", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       playlist: "myplaylist",
@@ -239,7 +240,7 @@ describe("generateYoutubeURL", () => {
     expect(url.searchParams.get("loop")).toBeNull()
   })
 
-  test("handles invalid start/end times gracefully", () => {
+  it("handles invalid start/end times gracefully", () => {
     const res = generateYoutubeURL({
       videoURL: watchUrl,
       start: "invalid",

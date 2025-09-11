@@ -1,16 +1,17 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { throttle } from "./throttle"
 
 describe("throttle", () => {
   beforeEach(() => {
-    jest.useFakeTimers()
+    vi.useFakeTimers()
   })
 
   afterEach(() => {
-    jest.useRealTimers()
+    vi.useRealTimers()
   })
 
   it("should execute function immediately on first call", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     const throttledFn = throttle(mockFn, 100)
 
     throttledFn()
@@ -18,7 +19,7 @@ describe("throttle", () => {
   })
 
   it("should not execute function again until delay has passed", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     const throttledFn = throttle(mockFn, 100)
 
     throttledFn()
@@ -27,12 +28,12 @@ describe("throttle", () => {
 
     expect(mockFn).toHaveBeenCalledTimes(1)
 
-    jest.advanceTimersByTime(100)
+    vi.advanceTimersByTime(100)
     expect(mockFn).toHaveBeenCalledTimes(2)
   })
 
   it("should pass arguments correctly", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     const throttledFn = throttle(mockFn, 100)
 
     throttledFn("arg1", "arg2", 123)
@@ -40,7 +41,7 @@ describe("throttle", () => {
   })
 
   it("should use latest arguments for delayed execution", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     const throttledFn = throttle(mockFn, 100)
 
     throttledFn("first")
@@ -50,13 +51,13 @@ describe("throttle", () => {
     expect(mockFn).toHaveBeenCalledTimes(1)
     expect(mockFn).toHaveBeenCalledWith("first")
 
-    jest.advanceTimersByTime(100)
+    vi.advanceTimersByTime(100)
     expect(mockFn).toHaveBeenCalledTimes(2)
     expect(mockFn).toHaveBeenLastCalledWith("third")
   })
 
   it("should handle zero delay", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     const throttledFn = throttle(mockFn, 0)
 
     throttledFn()
@@ -69,7 +70,7 @@ describe("throttle", () => {
   it("should preserve this context", () => {
     const obj = {
       value: 42,
-      method: jest.fn(function (this: { value: number }) {
+      method: vi.fn(function (this: { value: number }) {
         return this.value
       }),
     }
@@ -81,31 +82,31 @@ describe("throttle", () => {
   })
 
   it("should allow execution after delay period", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     const throttledFn = throttle(mockFn, 100)
 
     throttledFn()
     expect(mockFn).toHaveBeenCalledTimes(1)
 
-    jest.advanceTimersByTime(100)
+    vi.advanceTimersByTime(100)
     throttledFn()
     expect(mockFn).toHaveBeenCalledTimes(2)
   })
 
   it("should throw error for non-function input", () => {
-    expect(() =>
-      throttle("not a function" as unknown as typeof jest.fn, 100),
-    ).toThrow("First argument must be a function")
-    expect(() => throttle(123 as unknown as typeof jest.fn, 100)).toThrow(
+    expect(() => throttle("not a function" as never, 100)).toThrow(
       "First argument must be a function",
     )
-    expect(() => throttle(null as unknown as typeof jest.fn, 100)).toThrow(
+    expect(() => throttle(123 as never, 100)).toThrow(
+      "First argument must be a function",
+    )
+    expect(() => throttle(null as never, 100)).toThrow(
       "First argument must be a function",
     )
   })
 
   it("should throw error for invalid delay", () => {
-    const mockFn = jest.fn()
+    const mockFn = vi.fn()
     expect(() => throttle(mockFn, -1)).toThrow(
       "Delay must be a non-negative number",
     )
