@@ -107,11 +107,41 @@ Converts a Date to a Dayjs object in UTC.
 getDateInUTC(new Date());
 ```
 
-#### `parseTimeSpent(initialDate: string | Date, finalDate: string | Date, locale?: string): string`
-Returns a human-readable string describing the time difference between two dates, localized.
+#### `parseTimeSpent(initialDate: string | Date, finalDate: string | Date, locale?: string, options?: { format?: 'verbose' | 'compact'; minimal?: boolean }): ITimeSpent`
+
+Retorna um objeto com a decomposição do tempo entre duas datas e uma string formatada. Estrutura retornada (ITimeSpent):
+
+- years: number
+- months: number
+- days: number
+- hours: number
+- minutes: number
+- seconds: number
+- formatted: string
+
+Parâmetros:
+- initialDate: Data inicial (string ou Date)
+- finalDate: Data final (string ou Date)
+- locale (opcional): Código de localidade (ex.: "pt-BR", "en-US"). Padrão: "pt-BR"
+- options (opcional):
+  - format: "verbose" | "compact" — "verbose" gera texto humanizado (ex.: "1 dia, 3 horas"), "compact" gera tokens curtos (ex.: "1d3h")
+  - minimal: boolean — quando true, mantém apenas a maior unidade não-zero (ex.: "1d" ou "1 dia")
+
+Exemplos:
 
 ```typescript
-parseTimeSpent('2020-01-01', '2022-04-16', 'en-US'); // "2 years, 3 months, and 15 days"
+// verbose (padrão)
+const result = parseTimeSpent('2020-01-01', '2022-04-16', 'en-US')
+// result.formatted -> "2 years, 3 months, and 15 days"
+// result.years -> 2, result.months -> 3, result.days -> 15
+
+// compact
+const compact = parseTimeSpent('2022-04-01T00:00:00', '2022-04-02T03:04:05', 'pt-BR', { format: 'compact' })
+// compact.formatted -> "1d3h4min5s"
+
+// minimal (maior unidade apenas)
+const minimal = parseTimeSpent('2022-04-01T00:00:00', '2022-04-02T03:04:05', 'pt-BR', { minimal: true })
+// minimal.formatted -> "1 dia"
 ```
 
 ### Files Utilities
