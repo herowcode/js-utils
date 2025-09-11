@@ -32,14 +32,14 @@
       "require": "./dist/files/index.js"
     },
     "./function": {
-      "types": "./dist/function.d.ts",
-      "import": "./dist/function.esm.js",
-      "require": "./dist/function.js"
+      "types": "./dist/function/index.d.ts",
+      "import": "./dist/function/index.esm.js",
+      "require": "./dist/function/index.js"
     },
     "./youtube": {
-      "types": "./dist/youtube.d.ts",
-      "import": "./dist/youtube.esm.js",
-      "require": "./dist/youtube.js"
+      "types": "./dist/youtube/index.d.ts",
+      "import": "./dist/youtube/index.esm.js",
+      "require": "./dist/youtube/index.js"
     }
   },
   "files": [
