@@ -334,6 +334,14 @@ function VideoComponent() {
 - 10-second timeout with automatic cleanup
 - Returns formatted duration string (HH:MM:SS) or null on failure
 
+#### `validateYoutubeLink(videoUrl: string): Promise<boolean>`
+Checks whether a YouTube video exists by probing thumbnails and falling back to the oEmbed endpoint. Returns `true` for found/public videos and `false` otherwise.
+
+```typescript
+const ok = await validateYoutubeLink('https://youtu.be/dQw4w9WgXcQ');
+// true | false
+```
+
 ## Browser Support
 
 This library supports all modern browsers and Node.js environments. It uses ES2018 features and requires:

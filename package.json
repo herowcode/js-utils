@@ -1,6 +1,6 @@
 {
   "name": "@herowcode/utils",
-  "version": "1.1.1",
+  "version": "1.1.0",
   "description": "A lightweight collection of utility functions for everyday JavaScript/TypeScript development",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -57,10 +57,10 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "prepare": "yarn build",
-    "prepublishOnly": "yarn lint && yarn test && yarn build",
-    "version:patch": "yarn lint && yarn test && yarn build && npm version patch && git push && git push --tags",
-    "version:minor": "yarn lint && yarn test && yarn build && npm version minor && git push && git push --tags",
-    "version:major": "yarn lint && yarn test && yarn build && npm version major && git push && git push --tags"
+    "prepublishOnly": "yarn lint && yarn test:run && yarn build",
+    "version:patch": "yarn lint && yarn test:run && yarn build && npm version patch && git push && git push --tags",
+    "version:minor": "yarn lint && yarn test:run && yarn build && npm version minor && git push && git push --tags",
+    "version:major": "yarn lint && yarn test:run && yarn build && npm version major && git push && git push --tags"
   },
   "keywords": [
     "utils",
@@ -89,6 +89,7 @@
     "@testing-library/react-hooks": "8.0.1",
     "@types/react": "19.1.12",
     "@types/react-dom": "19.1.9",
+    "@vitest/coverage-v8": "3.2.4",
     "@vitest/ui": "3.2.4",
     "jest-environment-jsdom": "30.1.2",
     "jsdom": "26.1.0",
