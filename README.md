@@ -167,6 +167,24 @@ Formats a byte count as a human-readable string (e.g., "1.23 MB").
 formatBytes(1234567); // "1.18 MB"
 ```
 
+#### `fileExists(filePath: string): Promise<boolean>`
+Checks whether a file exists on the filesystem (Node.js). Resolves to `true` when the file can be accessed, otherwise `false`.
+
+```typescript
+const exists = await fileExists('/tmp/my-file.txt');
+if (exists) {
+  console.log('File exists');
+}
+```
+
+#### `fileDelete(filePath: string): Promise<void>`
+Deletes a file if it exists. Errors are caught and logged (useful for cleanup tasks where failures should not throw).
+
+```typescript
+await fileDelete('/tmp/old-file.txt');
+// If deletion fails it will be logged but will not throw.
+```
+
 ### Function Utilities
 
 #### `debounce<T>(fn: T, delay: number): (...args: Parameters<T>) => void`
