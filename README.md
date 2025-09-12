@@ -66,6 +66,17 @@ const embedUrl = generateYoutubeURL({
 #### `shuffle<T>(array: T[]): T[]`
 Returns a new array with the elements shuffled in random order.
 
+#### `markdownToText(markdown: string): string`
+
+Converts Markdown to plain text while preserving sensible line breaks. It strips formatting (bold, italic, strikethrough), removes headings, blockquotes, list markers, and table separators, keeps code fence inner content and inline code content, preserves image alt text and link text, decodes common HTML entities, and collapses excessive blank lines.
+
+Example:
+
+```typescript
+markdownToText('# Hello\n**bold**\n\n`code`')
+// "Hello\nbold\n\ncode"
+```
+
 ```typescript
 shuffle([1, 2, 3, 4]); // e.g., [3, 1, 4, 2]
 ```
