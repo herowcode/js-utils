@@ -3,7 +3,7 @@ export function formatDate(
   locale: Intl.LocalesArgument = "pt-BR",
   opts: Intl.DateTimeFormatOptions = {},
 ) {
-  return new Intl.DateTimeFormat(locale as any, {
+  return new Intl.DateTimeFormat(locale, {
     month: opts.month ?? "long",
     day: opts.day ?? "numeric",
     year: opts.year ?? "numeric",

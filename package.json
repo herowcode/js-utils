@@ -2,19 +2,44 @@
   "name": "@herowcode/utils",
   "version": "1.1.7",
   "description": "A lightweight collection of utility functions for everyday JavaScript/TypeScript development",
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/types/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/types/*.d.ts",
-      "import": "./dist/esm/*.js",
-      "require": "./dist/cjs/*.js"
+    "./array": {
+      "types": "./dist/array/index.d.ts",
+      "import": "./dist/array/index.esm.js",
+      "require": "./dist/array/index.js"
+    },
+    "./date": {
+      "types": "./dist/date/index.d.ts",
+      "import": "./dist/date/index.esm.js",
+      "require": "./dist/date/index.js"
+    },
+    "./string": {
+      "types": "./dist/string/index.d.ts",
+      "import": "./dist/string/index.esm.js",
+      "require": "./dist/string/index.js"
+    },
+    "./files": {
+      "types": "./dist/files/index.d.ts",
+      "import": "./dist/files/index.esm.js",
+      "require": "./dist/files/index.js"
+    },
+    "./function": {
+      "types": "./dist/function/index.d.ts",
+      "import": "./dist/function/index.esm.js",
+      "require": "./dist/function/index.js"
+    },
+    "./youtube": {
+      "types": "./dist/youtube/index.d.ts",
+      "import": "./dist/youtube/index.esm.js",
+      "require": "./dist/youtube/index.js"
     }
   },
   "files": [
