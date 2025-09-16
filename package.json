@@ -1,6 +1,6 @@
 {
   "name": "@herowcode/utils",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "A lightweight collection of utility functions for everyday JavaScript/TypeScript development",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
