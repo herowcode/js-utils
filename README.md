@@ -118,6 +118,17 @@ Converts a Date to a Dayjs object in UTC.
 getDateInUTC(new Date());
 ```
 
+#### `getRelativeTime(date: ConfigType, dateNow?: Dayjs | ConfigType): string`
+Returns a human-readable relative time string (for example: "a few seconds ago", "in 2 days"). It accepts any input supported by dayjs (Date, string, number) and an optional `dateNow` parameter to compute the difference against a custom reference time.
+
+```typescript
+// Using a fixed reference
+getRelativeTime('2025-09-15T11:59:00Z', dayjs('2025-09-15T12:00:00Z')) // "a minute ago"
+
+// Or with default reference (now)
+getRelativeTime(new Date()) // "a few seconds ago"
+```
+
 #### `parseTimeSpent(initialDate: string | Date, finalDate: string | Date, locale?: string, options?: { format?: 'verbose' | 'compact'; minimal?: boolean }): ITimeSpent`
 
 Retorna um objeto com a decomposição do tempo entre duas datas e uma string formatada. Estrutura retornada (ITimeSpent):
