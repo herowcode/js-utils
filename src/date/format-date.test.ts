@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
+import {
+  resetDayjsGlobalIntl,
+  resolveDayjsIntlConfig,
+  setDayjsGlobalIntl,
+} from "./dayjs"
 import { formatDate } from "./format-date"
 
 describe("formatDate", () => {
   const testDate = new Date("2023-12-25T10:30:00Z")
+
+  afterEach(() => {
+    resetDayjsGlobalIntl()
+  })
 
   it("should format date with default options (pt-BR)", () => {
     const result = formatDate(testDate)
@@ -133,5 +142,62 @@ describe("formatDate", () => {
     const result1 = formatDate(testDate, "en-US")
     const result2 = formatDate(testDate, "en-US")
     expect(result1).toBe(result2)
+  })
+
+  it("should format using dayjs tokens when provided", () => {
+    const result = formatDate("2023-12-25", "YYYY-MM-DD")
+    expect(result).toBe("2023-12-25")
+  })
+
+  it("should accept configuration object for formatting", () => {
+    const result = formatDate("2023-12-25", {
+      locale: "pt-br",
+      format: "DD [de] MMMM",
+    })
+
+    expect(result.toLowerCase()).toContain("25")
+    expect(result.toLowerCase()).toContain("dez")
+  })
+
+  it("should force Intl formatting when requested even with format string", () => {
+    const resolved = resolveDayjsIntlConfig({
+      locale: "en-US",
+      options: {
+        month: "long",
+        day: "numeric",
+        year: undefined,
+      },
+    })
+
+    expect(resolved.options.year).toBeUndefined()
+
+    const result = formatDate(testDate, {
+      format: "YYYY-MM-DD",
+      useIntl: true,
+      intl: {
+        locale: "en-US",
+        options: {
+          month: "long",
+          day: "numeric",
+          year: undefined,
+        },
+      },
+    })
+
+    expect(result).toBe("December 25")
+  })
+
+  it("should reflect global Intl configuration changes", () => {
+    setDayjsGlobalIntl({
+      locale: "en-US",
+      options: {
+        month: "2-digit",
+        day: "2-digit",
+        year: "2-digit",
+      },
+    })
+
+    const result = formatDate(testDate)
+    expect(result).toMatch(/12\/25\/23/)
   })
 })
