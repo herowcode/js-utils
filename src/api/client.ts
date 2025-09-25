@@ -156,6 +156,9 @@ async function api<T>(
     config.getUserIP,
   )
 
+  // Keep init headers in sync with the mutated request so fetch keeps auth headers
+  init.headers = new Headers(request.headers)
+
   // Execute request with retry logic
   const response = await fetchWithRetry(request, init)
 

@@ -23,6 +23,15 @@ function createMockResponse(
   } as unknown as Response
 }
 
+function getRequestFromFetchMock(callIndex = 0): Request {
+  const [input, init] = mockFetch.mock.calls[callIndex] as [
+    RequestInfo,
+    RequestInit | undefined,
+  ]
+
+  return new Request(input, init)
+}
+
 describe("apiClient", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -51,14 +60,8 @@ describe("apiClient", () => {
         },
       })
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(Request),
-        expect.objectContaining({
-          credentials: "include",
-        }),
-      )
-
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
+      expect(request.credentials).toBe("include")
       expect(request.url).toBe(
         "https://api.example.com/users?page=1&limit=10&active=true&name=john",
       )
@@ -72,7 +75,7 @@ describe("apiClient", () => {
 
       await client.get("/users", { params: {} })
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.url).toBe("https://api.example.com/users")
     })
 
@@ -84,7 +87,7 @@ describe("apiClient", () => {
 
       await client.get("/users")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.url).toBe("https://api.example.com/users")
     })
   })
@@ -100,7 +103,7 @@ describe("apiClient", () => {
       expect(result.data).toEqual({ data: "test" })
       expect(result.error).toBeNull()
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.method).toBe("GET")
     })
 
@@ -113,7 +116,7 @@ describe("apiClient", () => {
       expect(result.data).toEqual({ id: 1 })
       expect(result.error).toBeNull()
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.method).toBe("POST")
       expect(request.headers.get("Content-Type")).toBe("application/json")
     })
@@ -125,7 +128,7 @@ describe("apiClient", () => {
 
       await client.put("/users/1", { json: { name: "updated" } })
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.method).toBe("PUT")
     })
 
@@ -137,7 +140,7 @@ describe("apiClient", () => {
       expect(result.data).toBeNull()
       expect(result.error).toBeNull()
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.method).toBe("DELETE")
     })
 
@@ -148,7 +151,7 @@ describe("apiClient", () => {
 
       await client.patch("/users/1", { json: { active: false } })
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.method).toBe("PATCH")
     })
   })
@@ -160,7 +163,7 @@ describe("apiClient", () => {
 
       await client.get("/users")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.url).toBe("https://api.example.com/users")
     })
 
@@ -170,7 +173,7 @@ describe("apiClient", () => {
 
       await client.get("/users")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.url).toBe("https://api.example.com/users")
     })
 
@@ -180,7 +183,7 @@ describe("apiClient", () => {
 
       await client.get("https://other-api.com/data")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.url).toBe("https://other-api.com/data")
     })
   })
@@ -196,7 +199,7 @@ describe("apiClient", () => {
 
       await client.get("/protected")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.headers.get("Authorization")).toBe("Bearer test-token")
       expect(getAccessToken).toHaveBeenCalledOnce()
     })
@@ -211,7 +214,7 @@ describe("apiClient", () => {
 
       await client.get("/test")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.headers.get("X-User-IP")).toBe("192.168.1.1")
       expect(getUserIP).toHaveBeenCalledOnce()
     })
@@ -228,7 +231,7 @@ describe("apiClient", () => {
 
       await client.get("/test")
 
-      const request = mockFetch.mock.calls[0][0] as Request
+      const request = getRequestFromFetchMock()
       expect(request.headers.get("Authorization")).toBeNull()
       expect(request.headers.get("X-User-IP")).toBeNull()
     })
