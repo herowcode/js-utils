@@ -1,3 +1,4 @@
+export * from "./api/index.js" // API utilities
 export * from "./array/index.js" // Array utilities
 export * from "./date/index.js" // Date utilities
 export * from "./files/index.js" // Files utilities

@@ -11,6 +11,7 @@ A lightweight collection of utility functions for everyday JavaScript/TypeScript
 - 🎯 **Tree-shakable** - Only import what you need
 - 📂 **Scoped exports** - Import from specific modules
 - 🎥 **YouTube utilities** - Extract video IDs, generate URLs, and get video durations
+- 🌐 **API client** - HTTP client with retry logic, authentication, and standardized error handling
 
 ## Installation
 
@@ -24,7 +25,7 @@ yarn add @herowcode/utils
 
 ### Import everything:
 ```typescript
-import { formatDate, capitalize, debounce, extractYouTubeId } from '@herowcode/utils';
+import { formatDate, capitalize, debounce, extractYouTubeId, apiClient } from '@herowcode/utils';
 ```
 
 ### Import by scope:
@@ -34,6 +35,7 @@ import { capitalize, camelCase } from '@herowcode/utils/string';
 import { randomInt } from '@herowcode/utils/number';
 import { debounce, throttle } from '@herowcode/utils/function';
 import { extractYouTubeId, generateYoutubeURL } from '@herowcode/utils/youtube';
+import { apiClient, apiWrapper } from '@herowcode/utils/api';
 ```
 
 ### Examples:
@@ -57,9 +59,134 @@ const embedUrl = generateYoutubeURL({
   embed: true, 
   autoplay: true 
 }); // "https://www.youtube.com/embed/abc123?autoplay=1"
+
+// API utilities
+const client = apiClient({ baseURL: 'https://api.example.com' });
+const result = await client.get('/users', { params: { page: 1 } });
+if (result.error) {
+  console.error('API Error:', result.error.message);
+} else {
+  console.log('Users:', result.data);
+}
 ```
 
 ## API Reference
+
+### API Utilities
+
+#### `apiClient(config?: TApiClientProps)`
+Creates a configured HTTP client with standardized error handling, authentication, retry logic, and response processing.
+
+**Configuration Options:**
+- `baseURL`: Base URL for all requests
+- `onSignoutUnauthorized`: Callback for 401 responses outside sign-in paths
+- `getAccessToken`: Function to retrieve auth tokens
+- `getUserIP`: Function to get user IP for headers
+
+**Methods:**
+- `get<T>(url, options?)`: GET request
+- `post<T>(url, options?)`: POST request  
+- `put<T>(url, options?)`: PUT request
+- `delete<T>(url, options?)`: DELETE request
+- `patch<T>(url, options?)`: PATCH request
+
+**Request Options (`ICustomRequestInit`):**
+- `json`: Data to be JSON-stringified as request body
+- `params`: Query parameters object  
+- `retry`: Retry configuration with limit, methods, status codes, and backoff
+- All standard `RequestInit` options except `body`
+
+```typescript
+import { apiClient } from '@herowcode/utils/api';
+
+// Basic usage
+const client = apiClient({
+  baseURL: 'https://api.example.com',
+  getAccessToken: () => Promise.resolve('token123'),
+  onSignoutUnauthorized: (response) => {
+    // Handle logout
+    console.log('Unauthorized:', response);
+  }
+});
+
+// GET with query parameters
+const result = await client.get('/users', {
+  params: { page: 1, limit: 10 }
+});
+
+// POST with JSON body
+const newUser = await client.post('/users', {
+  json: { name: 'John', email: 'john@example.com' }
+});
+
+// PUT with retry configuration
+const updated = await client.put('/users/123', {
+  json: { name: 'Jane' },
+  retry: {
+    limit: 3,
+    methods: ['put'],
+    statusCodes: [500, 502, 503],
+    backoffLimit: 5000
+  }
+});
+
+// Handle response
+if (result.error) {
+  console.error('API Error:', result.error.message);
+} else {
+  console.log('Data:', result.data);
+}
+```
+
+#### `apiWrapper<T, D>(apiCall: () => Promise<T>, defaultData?: D)`
+Wraps API calls with standardized error handling and returns a consistent result object.
+
+**Returns:** `{ data: T | D, error: IApiError | null }`
+
+**Error Types Handled:**
+- `Response` objects (fetch errors)
+- `AxiosError` objects  
+- Standard `Error` objects
+- Unknown error types
+
+**IApiError Properties:**
+- `message`: Error description
+- `status`: HTTP status code (if applicable)
+- `code`: Error code (if available)
+- `details`: Additional error details
+- `path`: Request path (if applicable)
+- `timestamp`: Error timestamp (if provided by API)
+
+```typescript
+import { apiWrapper } from '@herowcode/utils/api';
+
+// Basic usage
+const fetchUser = async (id: string) => {
+  const response = await fetch(`/api/users/${id}`);
+  if (!response.ok) throw response;
+  return response.json();
+};
+
+const result = await apiWrapper(() => fetchUser('123'));
+if (result.error) {
+  console.error('Failed to fetch user:', result.error.message);
+  console.log('Status:', result.error.status);
+} else {
+  console.log('User data:', result.data);
+}
+
+// With default data
+const defaultPosts = [];
+const postsResult = await apiWrapper(() => fetchPosts(), defaultPosts);
+// postsResult.data will be [] instead of null on error
+```
+
+**Features:**
+- Automatic error type detection and standardization
+- Support for fetch Response, Axios, and standard Error objects
+- Extraction of error details from response bodies
+- Consistent error format across different error types
+- Optional default data for graceful error handling
 
 ### Array Utilities
 
