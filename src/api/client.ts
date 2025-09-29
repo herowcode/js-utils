@@ -50,7 +50,16 @@ async function beforeRequestHook(
     headers.set("X-User-IP", userIP)
   }
 
-  return new Request(request, { headers })
+  let body: string | undefined
+  try {
+    const cloned = request.clone()
+    const text = await cloned.text()
+    body = text === "" ? undefined : text
+  } catch (_a) {
+    body = undefined
+  }
+
+  return new Request(request, { headers, body })
 }
 
 async function afterResponseHook(
