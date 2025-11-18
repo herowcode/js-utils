@@ -60,6 +60,15 @@ const embedUrl = generateYoutubeURL({
   autoplay: true 
 }); // "https://www.youtube.com/embed/abc123?autoplay=1"
 
+// Get detailed video information
+const videoInfo = await getYoutubeVideoInfo('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+if (videoInfo) {
+  console.log(videoInfo.title);        // "Rick Astley - Never Gonna Give You Up"
+  console.log(videoInfo.viewCount);    // 1500000000
+  console.log(videoInfo.lengthSeconds); // 213
+  console.log(videoInfo.isLive);       // false
+}
+
 // API utilities
 const client = apiClient({ baseURL: 'https://api.example.com' });
 const result = await client.get('/users', { params: { page: 1 } });
@@ -551,6 +560,92 @@ const thumb = await getYoutubeThumbnail('https://youtu.be/abc123');
 Notes:
 - Uses the browser Image load/error events to avoid CORS issues.
 - Returns `null` when the video ID cannot be extracted or no thumbnails load.
+
+#### `getYoutubeVideoInfo(videoUrl: string): Promise<TYouTubeVideoInfo | null>`
+Fetches comprehensive metadata about a YouTube video using a cascade of fallback strategies. Returns detailed information including title, channel, thumbnails, view count, duration, and more.
+
+**Features:**
+- **Three-tier fallback strategy:** YouTube watch page → oEmbed API → NoEmbed service
+- **Automatic caching:** Repeated requests for the same video use cached results
+- **Robust parsing:** Handles various YouTube response formats including live streams, shorts, and standard videos
+- **No API key required:** Uses public endpoints
+
+**Return Type (`TYouTubeVideoInfo`):**
+```typescript
+{
+  id: string                 // Video ID
+  url: string                // Full watch URL
+  title: string              // Video title
+  channelTitle: string       // Channel name
+  channelId?: string         // Channel ID
+  channelUrl?: string        // Channel URL
+  description?: string       // Full description
+  shortDescription?: string  // Short description
+  thumbnails: Array<{        // Available thumbnails
+    url: string
+    width?: number
+    height?: number
+  }>
+  thumbnail?: string         // Best quality thumbnail URL
+  publishedAt?: string       // Publication date (ISO 8601)
+  uploadedAt?: string        // Upload date (ISO 8601)
+  keywords?: string[]        // Video keywords/tags
+  viewCount?: number         // View count
+  lengthSeconds?: number     // Duration in seconds
+  isLive?: boolean          // Live stream status
+}
+```
+
+**Examples:**
+```typescript
+// Basic usage
+const info = await getYoutubeVideoInfo('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+if (info) {
+  console.log(info.title);        // "Rick Astley - Never Gonna Give You Up"
+  console.log(info.channelTitle); // "Rick Astley"
+  console.log(info.viewCount);    // 1500000000
+  console.log(info.lengthSeconds); // 213
+  console.log(info.thumbnail);    // Best quality thumbnail URL
+}
+
+// Check if video is a live stream
+const liveInfo = await getYoutubeVideoInfo('https://youtu.be/jfKfPfyJRdk');
+if (liveInfo?.isLive) {
+  console.log('This is a live stream!');
+}
+
+// Handle various URL formats
+const formats = [
+  'https://www.youtube.com/watch?v=abc123',
+  'https://youtu.be/abc123',
+  'https://www.youtube.com/embed/abc123',
+  'https://www.youtube.com/shorts/abc123'
+];
+// All return the same cached result
+
+// Error handling
+const invalid = await getYoutubeVideoInfo('https://example.com/not-youtube');
+console.log(invalid); // null
+
+const unavailable = await getYoutubeVideoInfo('https://youtube.com/watch?v=deleted');
+console.log(unavailable); // null (video doesn't exist)
+```
+
+**Fallback Strategy:**
+1. **YouTube Watch Page:** Parses `ytInitialPlayerResponse` from HTML (most data available)
+2. **YouTube oEmbed:** Uses official oEmbed endpoint (basic metadata)
+3. **NoEmbed Service:** Third-party service as last resort (includes description)
+
+**Caching:**
+- Results are cached per video ID
+- Different URL formats for the same video share the cache
+- Failed requests are not cached (allows retry on next call)
+
+**Notes:**
+- Returns `null` for invalid URLs, unavailable videos, or when all sources fail
+- Works in both browser and Node.js environments
+- No rate limiting implemented (use responsibly)
+- Cached data persists for the lifetime of the application
 
 ## Browser Support
 
