@@ -58,9 +58,9 @@ function mergeIntlConfigs(
       const value = override.options[key]
 
       if (value === undefined || value === null) {
-        delete (mergedOptions as any)[key]
+        delete mergedOptions[key]
       } else {
-        ;(mergedOptions as any)[key] = value as any
+        mergedOptions[key] = value as never
       }
     }
   }
