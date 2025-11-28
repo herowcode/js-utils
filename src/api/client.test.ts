@@ -437,4 +437,112 @@ describe("apiClient", () => {
       expect(result.error?.status).toBe(500)
     })
   })
+
+  describe("Content-Type Header Handling", () => {
+    it("should add Content-Type application/json when json body is provided", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, { id: 1 }))
+
+      await client.post("/users", { json: { name: "test" } })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBe("application/json")
+    })
+
+    it("should NOT add Content-Type application/json when json is null", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/users", { json: null })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBeNull()
+    })
+
+    it("should NOT add Content-Type application/json when json is undefined", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/users", { json: undefined })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBeNull()
+    })
+
+    it("should remove Content-Type application/json if manually set but no body provided", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("/users", {
+        headers: { "Content-Type": "application/json" },
+      })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBeNull()
+    })
+
+    it("should keep other Content-Type values when no body is provided", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("/users", {
+        headers: { "Content-Type": "text/plain" },
+      })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBe("text/plain")
+    })
+
+    it("should handle case-insensitive Content-Type check", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("/users", {
+        headers: { "content-type": "Application/JSON" },
+      })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBeNull()
+    })
+
+    it("should add Content-Type when json body is an empty object", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/users", { json: {} })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBe("application/json")
+    })
+
+    it("should add Content-Type when json body is an empty array", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/users", { json: [] })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBe("application/json")
+    })
+
+    it("should add Content-Type when json body is false", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/users", { json: false })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBe("application/json")
+    })
+
+    it("should add Content-Type when json body is 0", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/users", { json: 0 })
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Content-Type")).toBe("application/json")
+    })
+  })
 })

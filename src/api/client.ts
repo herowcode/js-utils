@@ -147,11 +147,23 @@ async function api<T>(
   }
 
   let body: RequestInit["body"]
-  if (options.json) {
+  if (options.json !== undefined && options.json !== null) {
     body = JSON.stringify(options.json)
-    init.headers = {
-      ...init.headers,
-      "Content-Type": "application/json",
+    // Only add Content-Type if body is not empty
+    if (body && body !== "null" && body !== "undefined") {
+      init.headers = {
+        ...init.headers,
+        "Content-Type": "application/json",
+      }
+    }
+  }
+
+  // Remove Content-Type application/json if there's no body
+  if (!body) {
+    const headers = new Headers(init.headers)
+    if (headers.get("Content-Type")?.toLowerCase() === "application/json") {
+      headers.delete("Content-Type")
+      init.headers = headers
     }
   }
 
