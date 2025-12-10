@@ -17,7 +17,7 @@ vi.mock("./validate-youtube-link", () => ({
 import { validateYoutubeLink } from "./validate-youtube-link"
 
 async function waitForCondition(
-  assertion: () => void | boolean,
+  assertion: () => undefined | boolean,
   { timeout = 2000, interval = 10 } = {},
 ): Promise<void> {
   const start = Date.now()
@@ -182,9 +182,7 @@ describe("useGetYoutubeVideoDuration", () => {
     const getDuration = useGetYoutubeVideoDuration()
 
     // Start the function call
-    const promise = getDuration(
-      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    )
+    const promise = getDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
     // Simulate API loading
     setTimeout(() => {
@@ -201,9 +199,7 @@ describe("useGetYoutubeVideoDuration", () => {
   it("should create and cleanup iframe properly", async () => {
     const getDuration = useGetYoutubeVideoDuration()
 
-    const promise = getDuration(
-      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    )
+    const promise = getDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
     // Check that iframe is created
     await waitForCondition(() => {
@@ -420,14 +416,17 @@ describe("useGetYoutubeVideoDuration", () => {
     ]
 
     // Check that multiple iframes are created with unique IDs
-    await waitForCondition(() => {
-      const iframes = document.querySelectorAll('iframe[id^="yt-duration-"]')
-      if (iframes.length !== 3) return false
-      const ids = Array.from(iframes).map((iframe) => iframe.id)
-      const uniqueIds = [...new Set(ids)]
-      expect(uniqueIds.length).toBe(3)
-      return true
-    }, { timeout: 2000 })
+    await waitForCondition(
+      () => {
+        const iframes = document.querySelectorAll('iframe[id^="yt-duration-"]')
+        if (iframes.length !== 3) return false
+        const ids = Array.from(iframes).map((iframe) => iframe.id)
+        const uniqueIds = [...new Set(ids)]
+        expect(uniqueIds.length).toBe(3)
+        return true
+      },
+      { timeout: 2000 },
+    )
 
     const results = await Promise.all(promises)
     results.forEach((duration) => {
