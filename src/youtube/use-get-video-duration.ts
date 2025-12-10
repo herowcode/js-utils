@@ -1,5 +1,4 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: Window is any */
-import { useCallback } from "react"
 import { formatSecondsToHMS } from "../string"
 import { extractYouTubeId } from "./extract-youtube-video-id"
 import { validateYoutubeLink } from "./validate-youtube-link"
@@ -44,111 +43,110 @@ function loadYouTubeIFrameAPI(): Promise<void> {
  * resolving to the video duration formatted as "HH:MM:SS" or null on failure.
  */
 export function useGetYoutubeVideoDuration() {
-  const getYoutubeVideoDuration = useCallback(
-    async (videoUrl: string): Promise<string | null> => {
-      const videoId = extractYouTubeId(videoUrl)
-      if (!videoId) return null
+  const getYoutubeVideoDuration = async (
+    videoUrl: string,
+  ): Promise<string | null> => {
+    const videoId = extractYouTubeId(videoUrl)
+    if (!videoId) return null
 
-      const videoIsValid = await validateYoutubeLink(videoUrl)
-      if (!videoIsValid) return null
+    const videoIsValid = await validateYoutubeLink(videoUrl)
+    if (!videoIsValid) return null
 
-      try {
-        await loadYouTubeIFrameAPI()
-      } catch {
-        return null
+    try {
+      await loadYouTubeIFrameAPI()
+    } catch {
+      return null
+    }
+
+    return await new Promise<string | null>((resolve) => {
+      const iframeId = `yt-duration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+      const iframe = document.createElement("iframe")
+      // create a minimal offscreen iframe for the player
+      iframe.id = iframeId
+      iframe.style.position = "fixed"
+      iframe.style.left = "-9999px"
+      iframe.style.width = "1px"
+      iframe.style.height = "1px"
+      iframe.style.opacity = "0"
+      iframe.style.pointerEvents = "none"
+
+      // embed URL with enablejsapi so we can construct YT.Player
+      const origin = window.location.origin
+      iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?enablejsapi=1&origin=${encodeURIComponent(origin)}`
+
+      let resolved = false
+      let player: any = null
+      let cleanupTimeout: number | null = null
+
+      function cleanupAndResolve(result: string | null) {
+        if (resolved) return
+        resolved = true
+        try {
+          if (player && typeof player.destroy === "function") player.destroy()
+        } catch {
+          /* ignore */
+        }
+        try {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
+        } catch {
+          /* ignore */
+        }
+        if (cleanupTimeout) window.clearTimeout(cleanupTimeout)
+        resolve(result)
       }
 
-      return await new Promise<string | null>((resolve) => {
-        const iframeId = `yt-duration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-        const iframe = document.createElement("iframe")
-        // create a minimal offscreen iframe for the player
-        iframe.id = iframeId
-        iframe.style.position = "fixed"
-        iframe.style.left = "-9999px"
-        iframe.style.width = "1px"
-        iframe.style.height = "1px"
-        iframe.style.opacity = "0"
-        iframe.style.pointerEvents = "none"
+      // timeout fallback
+      cleanupTimeout = window.setTimeout(() => {
+        cleanupAndResolve(null)
+      }, 10000) // 10s timeout
 
-        // embed URL with enablejsapi so we can construct YT.Player
-        const origin = window.location.origin
-        iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?enablejsapi=1&origin=${encodeURIComponent(origin)}`
+      document.body.appendChild(iframe)
 
-        let resolved = false
-        let player: any = null
-        let cleanupTimeout: number | null = null
-
-        function cleanupAndResolve(result: string | null) {
-          if (resolved) return
-          resolved = true
-          try {
-            if (player && typeof player.destroy === "function") player.destroy()
-          } catch {
-            /* ignore */
-          }
-          try {
-            if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
-          } catch {
-            /* ignore */
-          }
-          if (cleanupTimeout) window.clearTimeout(cleanupTimeout)
-          resolve(result)
-        }
-
-        // timeout fallback
-        cleanupTimeout = window.setTimeout(() => {
-          cleanupAndResolve(null)
-        }, 10000) // 10s timeout
-
-        document.body.appendChild(iframe)
-
-        // Construct player
-        try {
-          player = new (window as any).YT.Player(iframeId, {
-            events: {
-              onReady: (e: any) => {
-                try {
-                  let duration = e.target.getDuration()
-                  if (!duration || duration === 0) {
-                    // Sometimes duration is 0 immediately; try a few short retries
-                    let attempts = 0
-                    const tryInterval = setInterval(() => {
-                      attempts += 1
-                      try {
-                        duration = e.target.getDuration()
-                        if (duration && duration > 0) {
-                          clearInterval(tryInterval)
-                          cleanupAndResolve(formatSecondsToHMS(duration))
-                        } else if (attempts >= 8) {
-                          clearInterval(tryInterval)
-                          cleanupAndResolve(null)
-                        }
-                      } catch {
-                        if (attempts >= 8) {
-                          clearInterval(tryInterval)
-                          cleanupAndResolve(null)
-                        }
+      // Construct player
+      try {
+        player = new (window as any).YT.Player(iframeId, {
+          events: {
+            onReady: (e: any) => {
+              try {
+                let duration = e.target.getDuration()
+                if (!duration || duration === 0) {
+                  // Sometimes duration is 0 immediately; try a few short retries
+                  let attempts = 0
+                  const tryInterval = setInterval(() => {
+                    attempts += 1
+                    try {
+                      duration = e.target.getDuration()
+                      if (duration && duration > 0) {
+                        clearInterval(tryInterval)
+                        cleanupAndResolve(formatSecondsToHMS(duration))
+                      } else if (attempts >= 8) {
+                        clearInterval(tryInterval)
+                        cleanupAndResolve(null)
                       }
-                    }, 300)
-                  } else {
-                    cleanupAndResolve(formatSecondsToHMS(duration))
-                  }
-                } catch {
-                  cleanupAndResolve(null)
+                    } catch {
+                      if (attempts >= 8) {
+                        clearInterval(tryInterval)
+                        cleanupAndResolve(null)
+                      }
+                    }
+                  }, 300)
+                } else {
+                  cleanupAndResolve(formatSecondsToHMS(duration))
                 }
-              },
-              onError: () => {
+              } catch {
                 cleanupAndResolve(null)
-              },
+              }
             },
-          })
-        } catch {
-          cleanupAndResolve(null)
-        }
-      })
-    },
-    [],
-  )
+            onError: () => {
+              cleanupAndResolve(null)
+            },
+          },
+        })
+      } catch {
+        cleanupAndResolve(null)
+      }
+    })
+  }
 
   return getYoutubeVideoDuration
 }
