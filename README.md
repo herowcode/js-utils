@@ -515,17 +515,15 @@ generateYoutubeURL({
 - `origin`, `playlist`: Additional parameters
 - `params`: Custom query parameters
 
-#### `useGetYoutubeVideoDuration(): (videoUrl: string) => Promise<string | null>`
+#### `getYoutubeVideoDuration(): (videoUrl: string) => Promise<string | null>`
 React hook that returns a function to get YouTube video duration using the YouTube IFrame API.
 
 ```typescript
-import { useGetYoutubeVideoDuration } from '@herowcode/utils/youtube';
+import { getYoutubeVideoDuration } from '@herowcode/utils/youtube';
 
 function VideoComponent() {
-  const getVideoDuration = useGetYoutubeVideoDuration();
-  
   const handleGetDuration = async () => {
-    const duration = await getVideoDuration('https://youtu.be/dQw4w9WgXcQ');
+    const duration = await getYoutubeVideoDuration('https://youtu.be/dQw4w9WgXcQ');
     console.log(duration); // "03:32" or null if failed
   };
   

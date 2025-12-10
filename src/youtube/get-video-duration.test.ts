@@ -8,7 +8,7 @@ import {
   type Mock,
   vi,
 } from "vitest"
-import { useGetYoutubeVideoDuration } from "./use-get-video-duration"
+import { getYoutubeVideoDuration } from "./get-video-duration"
 
 vi.mock("./validate-youtube-link", () => ({
   validateYoutubeLink: vi.fn(),
@@ -49,7 +49,7 @@ async function waitForCondition(
   })
 }
 
-describe("useGetYoutubeVideoDuration", () => {
+describe("getYoutubeVideoDuration", () => {
   let mockYTPlayer: any
   let mockYTAPI: any
   let originalYT: any
@@ -138,15 +138,11 @@ describe("useGetYoutubeVideoDuration", () => {
   })
 
   it("should return a function when called", () => {
-    const getDuration = useGetYoutubeVideoDuration()
-
-    expect(typeof getDuration).toBe("function")
+    expect(typeof getYoutubeVideoDuration).toBe("function")
   })
 
   it("should return formatted duration for valid YouTube URL", async () => {
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -154,9 +150,7 @@ describe("useGetYoutubeVideoDuration", () => {
   })
 
   it("should return null for invalid YouTube URL", async () => {
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration("https://invalid-url.com")
+    const duration = await getYoutubeVideoDuration("https://invalid-url.com")
 
     expect(duration).toBe(null)
   })
@@ -165,9 +159,7 @@ describe("useGetYoutubeVideoDuration", () => {
     // ensure validator returns false for this call
     ;(validateYoutubeLink as unknown as Mock).mockResolvedValueOnce(false)
 
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -179,10 +171,10 @@ describe("useGetYoutubeVideoDuration", () => {
     // Remove YT from window to simulate API not loaded
     delete (window as any).YT
 
-    const getDuration = useGetYoutubeVideoDuration()
-
     // Start the function call
-    const promise = getDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    const promise = getYoutubeVideoDuration(
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    )
 
     // Simulate API loading
     setTimeout(() => {
@@ -197,9 +189,9 @@ describe("useGetYoutubeVideoDuration", () => {
   })
 
   it("should create and cleanup iframe properly", async () => {
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const promise = getDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    const promise = getYoutubeVideoDuration(
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    )
 
     // Check that iframe is created
     await waitForCondition(() => {
@@ -235,9 +227,7 @@ describe("useGetYoutubeVideoDuration", () => {
         return mockYTPlayer
       })
 
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -252,9 +242,7 @@ describe("useGetYoutubeVideoDuration", () => {
       return 195 // Then return actual duration
     })
 
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -272,10 +260,8 @@ describe("useGetYoutubeVideoDuration", () => {
       }
     })
 
-    const getDuration = useGetYoutubeVideoDuration()
-
     // This should timeout and return null
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -288,9 +274,7 @@ describe("useGetYoutubeVideoDuration", () => {
       throw new Error("Player construction failed")
     })
 
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -323,9 +307,7 @@ describe("useGetYoutubeVideoDuration", () => {
         return mockPlayerWithErrors
       })
 
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -339,9 +321,7 @@ describe("useGetYoutubeVideoDuration", () => {
     existingScript.src = "https://www.youtube.com/iframe_api"
     document.body.appendChild(existingScript)
 
-    const getDuration = useGetYoutubeVideoDuration()
-
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -372,10 +352,8 @@ describe("useGetYoutubeVideoDuration", () => {
         return mockPlayerWithBadDestroy
       })
 
-    const getDuration = useGetYoutubeVideoDuration()
-
     // Should not throw error during cleanup and should still return duration
-    const duration = await getDuration(
+    const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     )
 
@@ -383,8 +361,6 @@ describe("useGetYoutubeVideoDuration", () => {
   })
 
   it("should generate unique iframe IDs for concurrent calls", async () => {
-    const getDuration = useGetYoutubeVideoDuration()
-
     let createdPlayerCount = 0
     mockYTAPI.Player = vi
       .fn()
@@ -410,9 +386,9 @@ describe("useGetYoutubeVideoDuration", () => {
 
     // Make multiple concurrent calls
     const promises = [
-      getDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
-      getDuration("https://www.youtube.com/watch?v=test1"),
-      getDuration("https://www.youtube.com/watch?v=test2"),
+      getYoutubeVideoDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+      getYoutubeVideoDuration("https://www.youtube.com/watch?v=test1"),
+      getYoutubeVideoDuration("https://www.youtube.com/watch?v=test2"),
     ]
 
     // Check that multiple iframes are created with unique IDs
@@ -438,10 +414,7 @@ describe("useGetYoutubeVideoDuration", () => {
   })
 
   it("should return a stable function across calls", () => {
-    const firstFunction = useGetYoutubeVideoDuration()
-    const secondFunction = useGetYoutubeVideoDuration()
-
-    expect(typeof firstFunction).toBe("function")
-    expect(typeof secondFunction).toBe("function")
+    expect(typeof getYoutubeVideoDuration).toBe("function")
+    expect(typeof getYoutubeVideoDuration).toBe("function")
   })
 })
