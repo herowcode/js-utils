@@ -16,6 +16,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./api": {
+      "import": {
+        "types": "./dist/api/index.d.mts",
+        "default": "./dist/api/index.js"
+      },
+      "require": {
+        "types": "./dist/api/index.d.ts",
+        "default": "./dist/api/index.cjs"
+      }
+    },
     "./array": {
       "import": {
         "types": "./dist/array/index.d.mts",
@@ -34,16 +44,6 @@
       "require": {
         "types": "./dist/date/index.d.ts",
         "default": "./dist/date/index.cjs"
-      }
-    },
-    "./string": {
-      "import": {
-        "types": "./dist/string/index.d.mts",
-        "default": "./dist/string/index.js"
-      },
-      "require": {
-        "types": "./dist/string/index.d.ts",
-        "default": "./dist/string/index.cjs"
       }
     },
     "./files": {
@@ -86,6 +86,16 @@
         "default": "./dist/function/index.cjs"
       }
     },
+    "./string": {
+      "import": {
+        "types": "./dist/string/index.d.mts",
+        "default": "./dist/string/index.js"
+      },
+      "require": {
+        "types": "./dist/string/index.d.ts",
+        "default": "./dist/string/index.cjs"
+      }
+    },
     "./youtube": {
       "browser": {
         "import": {
@@ -115,22 +125,13 @@
         "types": "./dist/youtube/index.d.ts",
         "default": "./dist/youtube/index.cjs"
       }
-    },
-    "./api": {
-      "import": {
-        "types": "./dist/api/index.d.mts",
-        "default": "./dist/api/index.js"
-      },
-      "require": {
-        "types": "./dist/api/index.d.ts",
-        "default": "./dist/api/index.cjs"
-      }
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
+    "prebuild": "node scripts/sync-exports.cjs",
     "build": "tsup --config tsup.config.ts",
     "lint": "biome check --write --unsafe",
     "test": "vitest",

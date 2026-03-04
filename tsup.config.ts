@@ -1,20 +1,11 @@
+import { createRequire } from "node:module"
 import { defineConfig } from "tsup"
 
+const require = createRequire(import.meta.url)
+const { buildEntries } = require("./scripts/resolve-entries.cjs")
+
 export default defineConfig({
-  entry: {
-    index: "src/index.ts",
-    "api/index": "src/api/index.ts",
-    "array/index": "src/array/index.ts",
-    "date/index": "src/date/index.ts",
-    "files/index": "src/files/index.ts",
-    "files/index.node": "src/files/index.node.ts",
-    "files/index.browser": "src/files/index.browser.ts",
-    "function/index": "src/function/index.ts",
-    "string/index": "src/string/index.ts",
-    "youtube/index": "src/youtube/index.ts",
-    "youtube/index.node": "src/youtube/index.node.ts",
-    "youtube/index.browser": "src/youtube/index.browser.ts",
-  },
+  entry: buildEntries(),
   format: ["cjs", "esm"],
   outDir: "dist",
   outExtension({ format }) {
