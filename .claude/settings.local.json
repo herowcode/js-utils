@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python3:*)",
       "Bash(git:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(node:*)"
     ]
   }
 }
