@@ -108,8 +108,15 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org/'
 
-      - name: Clear npm auth token (Trusted Publisher uses OIDC)
-        run: npm config delete //registry.npmjs.org/:_authToken
+      - name: Get npm OIDC token
+        id: auth
+        run: |
+          TOKEN=$(curl -fsSL \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm" \
+            | jq -r '.value')
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
 
       - name: Download dist artifact
         uses: actions/download-artifact@v4
@@ -121,3 +128,5 @@ jobs:
         run: |
           npm pkg delete scripts.prepare scripts.prebuild
           npm publish --provenance --access public --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.auth.outputs.token }}
