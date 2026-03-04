@@ -115,5 +115,3 @@ jobs:
         run: |
           npm pkg delete scripts.prepare scripts.prebuild
           npm publish --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
