@@ -195,5 +195,6 @@
       "esbuild",
       "@biomejs/biome"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.30.1"
 }
