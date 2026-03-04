@@ -108,6 +108,9 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org/'
 
+      - name: Clear npm auth token (Trusted Publisher uses OIDC)
+        run: npm config delete //registry.npmjs.org/:_authToken
+
       - name: Download dist artifact
         uses: actions/download-artifact@v4
         with:
