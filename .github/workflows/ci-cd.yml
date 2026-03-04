@@ -117,4 +117,4 @@ jobs:
       - name: Publish to NPM
         run: |
           npm pkg delete scripts.prepare scripts.prebuild
-          npm publish --ignore-scripts
+          npm publish --provenance --access public --ignore-scripts
