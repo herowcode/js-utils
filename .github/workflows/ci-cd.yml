@@ -106,9 +106,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-
-      - name: Configure npm registry
-        run: npm config set registry https://registry.npmjs.org/
+          registry-url: 'https://registry.npmjs.org/'
 
       - name: Download dist artifact
         uses: actions/download-artifact@v4
