@@ -45,9 +45,8 @@ function buildEntries() {
     const files = fs.readdirSync(dirPath)
 
     for (const file of files) {
-      if (!file.endsWith(".ts") || file.endsWith(".d.ts") || file.endsWith(".test.ts")) continue
-
-      const base = file.replace(/\.ts$/, "") // "index" | "index.node" | "index.browser"
+      if (!file.endsWith(".ts") || file.endsWith(".d.ts") || file.endsWith(".test.ts") || file.endsWith(".test.tsx")) continue
+      const base = file.replace(/\.tsx?$/, "") // "index" | "index.node" | "index.browser"
       if (!base.startsWith("index")) continue
 
       const entryKey = `${dir}/${base}`
@@ -84,12 +83,14 @@ function buildExports() {
     /** @type {string[]} */
     const variants = []
     for (const file of files) {
-      if (!file.endsWith(".ts") || file.endsWith(".d.ts") || file.endsWith(".test.ts")) continue
-      const base = file.replace(/\.ts$/, "")
+      if (!file.endsWith(".ts") || file.endsWith(".d.ts") || file.endsWith(".test.ts") || file.endsWith(".test.tsx")) continue
+      const base = file.replace(/\.tsx?$/, "")
       if (base.startsWith("index")) variants.push(base)
     }
 
-    if (!variants.includes("index")) continue // skip dirs with no index.ts
+    // A dir is a valid module if it has any index variant (not just index.ts)
+    const hasAnyIndex = variants.some((v) => v === "index" || v.startsWith("index."))
+    if (!hasAnyIndex) continue
 
     const subpath = `./${dir}`
 
@@ -110,10 +111,12 @@ function buildExports() {
       entry[cond] = makeConditions(`${dir}/index.${cond}`)
     }
 
-    // Fallback (no condition)
-    const fallback = makeConditions(`${dir}/index`)
-    entry["import"] = fallback["import"]
-    entry["require"] = fallback["require"]
+    // Fallback (no condition) — only when a plain index.ts exists
+    if (variants.includes("index")) {
+      const fallback = makeConditions(`${dir}/index`)
+      entry["import"] = fallback["import"]
+      entry["require"] = fallback["require"]
+    }
 
     exports_[subpath] = entry
   }

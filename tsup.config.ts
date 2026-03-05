@@ -14,7 +14,7 @@ export default defineConfig({
   dts: {
     compilerOptions: {
       // Only include Node types for DTS; exclude test-only vitest/globals
-      types: ["node"],
+      types: ["node", "react"],
     },
   },
   clean: true,
@@ -23,5 +23,5 @@ export default defineConfig({
   treeshake: true,
   target: "es2018",
   platform: "neutral",
-  external: ["node:fs", "node:fs/promises", "node:path", "node:os", "node:crypto"],
+  external: ["node:fs", "node:fs/promises", "node:path", "node:os", "node:crypto", "react", "react-dom", "next", "next/image"],
 })
