@@ -114,7 +114,13 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Remove injected auth token to enable OIDC
+        run: npm config delete //registry.npmjs.org/:_authToken
+
       - name: Publish to NPM
         run: |
           npm pkg delete scripts.prepare scripts.prebuild
-          npm publish --access public --ignore-scripts
+          npm publish --provenance --access public --ignore-scripts
