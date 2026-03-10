@@ -96,6 +96,14 @@
           "types": "./dist/nextjs/index.browser.d.ts",
           "default": "./dist/nextjs/index.browser.cjs"
         }
+      },
+      "import": {
+        "types": "./dist/nextjs/index.d.mts",
+        "default": "./dist/nextjs/index.js"
+      },
+      "require": {
+        "types": "./dist/nextjs/index.d.ts",
+        "default": "./dist/nextjs/index.cjs"
       }
     },
     "./string": {
