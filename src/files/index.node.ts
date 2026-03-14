@@ -1,4 +1,5 @@
 export * from "./compress-image"
+export * from "./download-url-node-fallback"
 export * from "./file-delete"
 export * from "./file-exists"
 export * from "./format-bytes"

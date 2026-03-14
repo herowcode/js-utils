@@ -132,11 +132,11 @@ function buildExports() {
 function makeConditions(base) {
   return {
     import: {
-      types: `./dist/${base}.d.mts`,
+      types: `./dist/${base}.d.ts`,
       default: `./dist/${base}.js`,
     },
     require: {
-      types: `./dist/${base}.d.ts`,
+      types: `./dist/${base}.d.cts`,
       default: `./dist/${base}.cjs`,
     },
   }

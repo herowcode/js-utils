@@ -1,3 +1,5 @@
 export * from "./compress-image"
 export * from "./download-url"
+export * from "./file-delete-browser-fallback"
+export * from "./file-exists-browser-fallback"
 export * from "./format-bytes"

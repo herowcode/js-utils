@@ -2,147 +2,148 @@
   "name": "@herowcode/utils",
   "version": "1.5.2",
   "description": "A lightweight collection of utility functions for everyday JavaScript/TypeScript development",
+  "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
+        "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
     },
     "./api": {
       "import": {
-        "types": "./dist/api/index.d.mts",
+        "types": "./dist/api/index.d.ts",
         "default": "./dist/api/index.js"
       },
       "require": {
-        "types": "./dist/api/index.d.ts",
+        "types": "./dist/api/index.d.cts",
         "default": "./dist/api/index.cjs"
       }
     },
     "./array": {
       "import": {
-        "types": "./dist/array/index.d.mts",
+        "types": "./dist/array/index.d.ts",
         "default": "./dist/array/index.js"
       },
       "require": {
-        "types": "./dist/array/index.d.ts",
+        "types": "./dist/array/index.d.cts",
         "default": "./dist/array/index.cjs"
       }
     },
     "./date": {
       "import": {
-        "types": "./dist/date/index.d.mts",
+        "types": "./dist/date/index.d.ts",
         "default": "./dist/date/index.js"
       },
       "require": {
-        "types": "./dist/date/index.d.ts",
+        "types": "./dist/date/index.d.cts",
         "default": "./dist/date/index.cjs"
       }
     },
     "./files": {
       "browser": {
         "import": {
-          "types": "./dist/files/index.browser.d.mts",
+          "types": "./dist/files/index.browser.d.ts",
           "default": "./dist/files/index.browser.js"
         },
         "require": {
-          "types": "./dist/files/index.browser.d.ts",
+          "types": "./dist/files/index.browser.d.cts",
           "default": "./dist/files/index.browser.cjs"
         }
       },
       "node": {
         "import": {
-          "types": "./dist/files/index.node.d.mts",
+          "types": "./dist/files/index.node.d.ts",
           "default": "./dist/files/index.node.js"
         },
         "require": {
-          "types": "./dist/files/index.node.d.ts",
+          "types": "./dist/files/index.node.d.cts",
           "default": "./dist/files/index.node.cjs"
         }
       },
       "import": {
-        "types": "./dist/files/index.d.mts",
+        "types": "./dist/files/index.d.ts",
         "default": "./dist/files/index.js"
       },
       "require": {
-        "types": "./dist/files/index.d.ts",
+        "types": "./dist/files/index.d.cts",
         "default": "./dist/files/index.cjs"
       }
     },
     "./function": {
       "import": {
-        "types": "./dist/function/index.d.mts",
+        "types": "./dist/function/index.d.ts",
         "default": "./dist/function/index.js"
       },
       "require": {
-        "types": "./dist/function/index.d.ts",
+        "types": "./dist/function/index.d.cts",
         "default": "./dist/function/index.cjs"
       }
     },
     "./nextjs": {
       "browser": {
         "import": {
-          "types": "./dist/nextjs/index.browser.d.mts",
+          "types": "./dist/nextjs/index.browser.d.ts",
           "default": "./dist/nextjs/index.browser.js"
         },
         "require": {
-          "types": "./dist/nextjs/index.browser.d.ts",
+          "types": "./dist/nextjs/index.browser.d.cts",
           "default": "./dist/nextjs/index.browser.cjs"
         }
       },
       "import": {
-        "types": "./dist/nextjs/index.d.mts",
+        "types": "./dist/nextjs/index.d.ts",
         "default": "./dist/nextjs/index.js"
       },
       "require": {
-        "types": "./dist/nextjs/index.d.ts",
+        "types": "./dist/nextjs/index.d.cts",
         "default": "./dist/nextjs/index.cjs"
       }
     },
     "./string": {
       "import": {
-        "types": "./dist/string/index.d.mts",
+        "types": "./dist/string/index.d.ts",
         "default": "./dist/string/index.js"
       },
       "require": {
-        "types": "./dist/string/index.d.ts",
+        "types": "./dist/string/index.d.cts",
         "default": "./dist/string/index.cjs"
       }
     },
     "./youtube": {
       "browser": {
         "import": {
-          "types": "./dist/youtube/index.browser.d.mts",
+          "types": "./dist/youtube/index.browser.d.ts",
           "default": "./dist/youtube/index.browser.js"
         },
         "require": {
-          "types": "./dist/youtube/index.browser.d.ts",
+          "types": "./dist/youtube/index.browser.d.cts",
           "default": "./dist/youtube/index.browser.cjs"
         }
       },
       "node": {
         "import": {
-          "types": "./dist/youtube/index.node.d.mts",
+          "types": "./dist/youtube/index.node.d.ts",
           "default": "./dist/youtube/index.node.js"
         },
         "require": {
-          "types": "./dist/youtube/index.node.d.ts",
+          "types": "./dist/youtube/index.node.d.cts",
           "default": "./dist/youtube/index.node.cjs"
         }
       },
       "import": {
-        "types": "./dist/youtube/index.d.mts",
+        "types": "./dist/youtube/index.d.ts",
         "default": "./dist/youtube/index.js"
       },
       "require": {
-        "types": "./dist/youtube/index.d.ts",
+        "types": "./dist/youtube/index.d.cts",
         "default": "./dist/youtube/index.cjs"
       }
     }
@@ -157,12 +158,13 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:exports": "node scripts/verify-exports.cjs",
     "test:coverage": "vitest run --coverage",
     "prepare": "pnpm build",
-    "prepublishOnly": "pnpm lint && pnpm test:run && pnpm build",
-    "version:patch": "pnpm lint && pnpm test:run && pnpm build && npm version patch && git push && git push --tags",
-    "version:minor": "pnpm lint && pnpm test:run && pnpm build && npm version minor && git push && git push --tags",
-    "version:major": "pnpm lint && pnpm test:run && pnpm build && npm version major && git push && git push --tags"
+    "prepublishOnly": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports",
+    "version:patch": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version patch && git push && git push --tags",
+    "version:minor": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version minor && git push && git push --tags",
+    "version:major": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version major && git push && git push --tags"
   },
   "keywords": [
     "utils",
