@@ -5,7 +5,7 @@ export const downloadUrl = async (url: string): Promise<boolean> => {
     const segments = pathname.split("/").filter((segment) => segment.length > 0)
     const filename = segments.length > 0 ? segments[segments.length - 1] : null
 
-    if (!filename || !filename.includes(".")) {
+    if (!filename?.includes(".")) {
       throw new Error("URL does not contain a valid filename")
     }
 

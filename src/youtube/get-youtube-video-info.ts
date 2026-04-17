@@ -113,12 +113,21 @@ async function fetchYoutubeVideoInfo(
   return null
 }
 
+const WATCH_PAGE_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  Cookie: "CONSENT=YES+cb; SOCS=CAI",
+}
+
 async function fetchFromWatchPage(
   videoId: string,
   watchUrl: string,
 ): Promise<TYouTubeVideoInfo | null> {
   try {
-    const response = await fetch(watchUrl)
+    const response = await fetch(watchUrl, { headers: WATCH_PAGE_HEADERS })
     if (!response.ok) {
       return null
     }
@@ -265,16 +274,34 @@ function extractJsonBlock(html: string, marker: string): string | null {
   if (jsonStart === -1) return null
 
   let depth = 0
+  let inString = false
+  let escaped = false
   for (let i = jsonStart; i < html.length; i++) {
     const char = html[i]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (char === "\\") {
+        escaped = true
+      } else if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+      continue
+    }
+
     if (char === "{") {
       depth += 1
     } else if (char === "}") {
       depth -= 1
-    }
-
-    if (depth === 0) {
-      return html.slice(jsonStart, i + 1)
+      if (depth === 0) {
+        return html.slice(jsonStart, i + 1)
+      }
     }
   }
 
