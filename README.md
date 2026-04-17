@@ -123,13 +123,16 @@ Some functions only make sense in a browser (`compressImage`, `downloadUrl`); ot
 
 The `exports` field is **auto-generated** by `scripts/sync-exports.cjs` on every build — never edit it manually.
 
-For `getYoutubeVideoInfo` specifically, the Node.js environment required a three-tier fallback since the IFrame API isn't available server-side:
+For `getYoutubeVideoInfo` specifically, the Node.js environment queries **four sources in parallel** and merges the results — each field picks the first non-empty value and thumbnails are deduped across sources:
 
 ```
-1. Parse ytInitialPlayerResponse from the watch page HTML  →  full metadata
-2. YouTube oEmbed API                                       →  title + thumbnail
-3. NoEmbed public API                                       →  last resort
+1. InnerTube player endpoint (ANDROID → WEB client)  →  full metadata (primary)
+2. Watch page HTML (ytInitialPlayerResponse)         →  full metadata
+3. YouTube oEmbed API                                →  title + thumbnail
+4. NoEmbed public API                                →  title + description + upload date
 ```
+
+The InnerTube endpoint is used because it works reliably from datacenter/containerized environments where YouTube serves a consent interstitial instead of the normal watch page. Sources complement each other: if InnerTube returns metadata but oEmbed contributes an extra thumbnail size, the merged result has both.
 
 Results are cached by video ID as a Promise — concurrent calls for the same video hit the network only once, and failed requests evict themselves from the cache automatically.
 

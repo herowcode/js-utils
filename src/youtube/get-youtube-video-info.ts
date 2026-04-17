@@ -101,14 +101,198 @@ async function fetchYoutubeVideoInfo(
 ): Promise<TYouTubeVideoInfo | null> {
   const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
 
-  const htmlInfo = await fetchFromWatchPage(videoId, watchUrl)
-  if (htmlInfo) return htmlInfo
+  const results = await Promise.allSettled([
+    fetchFromInnertube(videoId, watchUrl),
+    fetchFromWatchPage(videoId, watchUrl),
+    fetchFromOEmbed(videoId, watchUrl),
+    fetchFromNoEmbed(videoId, watchUrl),
+  ])
 
-  const oEmbedInfo = await fetchFromOEmbed(videoId, watchUrl)
-  if (oEmbedInfo) return oEmbedInfo
+  const sources: TYouTubeVideoInfo[] = []
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value) {
+      sources.push(result.value)
+    }
+  }
 
-  const noEmbedInfo = await fetchFromNoEmbed(videoId, watchUrl)
-  if (noEmbedInfo) return noEmbedInfo
+  if (!sources.length) return null
+
+  return mergeVideoInfo(sources, videoId, watchUrl)
+}
+
+function mergeVideoInfo(
+  sources: TYouTubeVideoInfo[],
+  videoId: string,
+  watchUrl: string,
+): TYouTubeVideoInfo {
+  const pickString = (key: keyof TYouTubeVideoInfo): string | undefined => {
+    for (const source of sources) {
+      const value = source[key]
+      if (typeof value === "string" && value.length > 0) return value
+    }
+    return undefined
+  }
+
+  const pickNumber = (key: keyof TYouTubeVideoInfo): number | undefined => {
+    for (const source of sources) {
+      const value = source[key]
+      if (typeof value === "number" && !Number.isNaN(value)) return value
+    }
+    return undefined
+  }
+
+  const pickBoolean = (key: keyof TYouTubeVideoInfo): boolean | undefined => {
+    for (const source of sources) {
+      const value = source[key]
+      if (typeof value === "boolean") return value
+    }
+    return undefined
+  }
+
+  const pickKeywords = (): string[] | undefined => {
+    for (const source of sources) {
+      if (source.keywords?.length) return source.keywords
+    }
+    return undefined
+  }
+
+  const mergedThumbnails = mergeThumbnails(sources)
+  const bestThumbnail = selectBestThumbnail(mergedThumbnails)
+
+  return {
+    id: pickString("id") ?? videoId,
+    url: pickString("url") ?? watchUrl,
+    title: pickString("title") ?? "",
+    channelTitle: pickString("channelTitle") ?? "",
+    channelId: pickString("channelId"),
+    channelUrl: pickString("channelUrl"),
+    description: pickString("description"),
+    shortDescription: pickString("shortDescription"),
+    thumbnails: mergedThumbnails,
+    thumbnail: pickString("thumbnail") ?? bestThumbnail?.url,
+    publishedAt: pickString("publishedAt"),
+    uploadedAt: pickString("uploadedAt"),
+    keywords: pickKeywords(),
+    viewCount: pickNumber("viewCount"),
+    lengthSeconds: pickNumber("lengthSeconds"),
+    isLive: pickBoolean("isLive"),
+  }
+}
+
+function mergeThumbnails(sources: TYouTubeVideoInfo[]): TYtThumbnail[] {
+  const seen = new Set<string>()
+  const merged: TYtThumbnail[] = []
+  for (const source of sources) {
+    for (const thumb of source.thumbnails ?? []) {
+      if (!thumb?.url || seen.has(thumb.url)) continue
+      seen.add(thumb.url)
+      merged.push(thumb)
+    }
+  }
+  return merged
+}
+
+type TInnertubeClient = {
+  name: string
+  body: Record<string, unknown>
+  userAgent: string
+}
+
+const INNERTUBE_CLIENTS: TInnertubeClient[] = [
+  {
+    name: "ANDROID",
+    userAgent:
+      "com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip",
+    body: {
+      context: {
+        client: {
+          clientName: "ANDROID",
+          clientVersion: "19.09.37",
+          androidSdkVersion: 34,
+          hl: "pt",
+          gl: "BR",
+          userAgent:
+            "com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip",
+        },
+      },
+    },
+  },
+  {
+    name: "WEB",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    body: {
+      context: {
+        client: {
+          clientName: "WEB",
+          clientVersion: "2.20240304.00.00",
+          hl: "pt",
+          gl: "BR",
+        },
+      },
+    },
+  },
+]
+
+const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
+
+async function fetchFromInnertube(
+  videoId: string,
+  watchUrl: string,
+): Promise<TYouTubeVideoInfo | null> {
+  for (const client of INNERTUBE_CLIENTS) {
+    try {
+      const response = await fetch(
+        `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": client.userAgent,
+            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+            "X-YouTube-Client-Name": client.name === "ANDROID" ? "3" : "1",
+            "X-YouTube-Client-Version":
+              client.name === "ANDROID" ? "19.09.37" : "2.20240304.00.00",
+            Origin: "https://www.youtube.com",
+          },
+          body: JSON.stringify({ ...client.body, videoId }),
+        },
+      )
+      if (!response.ok) continue
+
+      const data = (await response.json()) as TYtPlayerResponse
+      const details = data.videoDetails
+      const microformat = data.microformat?.playerMicroformatRenderer
+      if (!details && !microformat) continue
+
+      const thumbnails = getThumbnails(details, microformat)
+      const bestThumbnail = selectBestThumbnail(thumbnails)
+
+      return {
+        id: details?.videoId ?? videoId,
+        url: watchUrl,
+        title: details?.title ?? extractText(microformat?.title) ?? "",
+        channelTitle: details?.author ?? microformat?.ownerChannelName ?? "",
+        channelId: details?.channelId ?? microformat?.externalChannelId,
+        channelUrl: microformat?.ownerProfileUrl,
+        description:
+          extractText(microformat?.description) ?? details?.shortDescription,
+        shortDescription: details?.shortDescription,
+        thumbnails,
+        thumbnail: bestThumbnail?.url,
+        publishedAt: microformat?.publishDate ?? microformat?.uploadDate,
+        uploadedAt: microformat?.uploadDate,
+        keywords: details?.keywords,
+        viewCount: parseNumber(details?.viewCount),
+        lengthSeconds: parseNumber(details?.lengthSeconds),
+        isLive:
+          details?.isLiveContent ??
+          microformat?.liveBroadcastDetails?.isLiveNow,
+      }
+    } catch {
+      // try next client
+    }
+  }
 
   return null
 }

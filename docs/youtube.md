@@ -81,7 +81,7 @@ generateYoutubeURL({ videoURL: 'https://youtu.be/abc123', start: 90, end: 180 })
 
 ## `getYoutubeVideoInfo(videoUrl)`
 
-Fetches comprehensive metadata about a YouTube video. Uses a three-tier fallback strategy — no API key required.
+Fetches comprehensive metadata about a YouTube video. Queries **four sources in parallel** and merges their results — no API key required.
 
 ```typescript
 const info = await getYoutubeVideoInfo('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
@@ -96,15 +96,20 @@ if (info) {
 }
 ```
 
-### Fallback strategy
+### Source strategy
+
+All sources run in parallel via `Promise.allSettled`. Each field uses the first non-empty value in the priority order below; thumbnails are merged (deduped by URL):
 
 ```
-1. Parse ytInitialPlayerResponse from watch page HTML  →  full metadata
-2. YouTube oEmbed API                                   →  title + thumbnail
-3. NoEmbed public API                                   →  last resort
+1. InnerTube player endpoint (ANDROID → WEB client)  →  full metadata (primary)
+2. Watch page HTML (ytInitialPlayerResponse)         →  full metadata
+3. YouTube oEmbed API                                →  title + thumbnail
+4. NoEmbed public API                                →  title + description + upload date
 ```
 
-Concurrent calls for the same video ID share a single in-flight request. Failed requests are evicted from cache so the next call retries.
+The InnerTube endpoint is used first because it works reliably from datacenter/containerized environments where YouTube serves a consent page to the regular watch URL. If one source returns partial data, another may fill the gaps (e.g. InnerTube provides `description`/`lengthSeconds` while oEmbed contributes an additional thumbnail size).
+
+Concurrent calls for the same video ID share a single in-flight request. Failed requests are evicted from cache so the next call retries. Returns `null` only if **all** sources fail.
 
 ### Return type
 

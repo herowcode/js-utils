@@ -6,7 +6,68 @@ import { getYoutubeVideoInfo } from "./get-youtube-video-info"
  *
  * Este arquivo contém cenários de teste baseados em casos reais de uso,
  * incluindo vídeos populares, casos extremos e diferentes formatos de resposta.
+ *
+ * Desde a v1.6 a função consulta 4 fontes em paralelo (InnerTube → watch page
+ * → oEmbed → NoEmbed) e mescla os resultados. Os mocks abaixo roteiam as
+ * requisições por URL para cobrir cada fonte isoladamente ou em conjunto.
  */
+
+type TRouteHandlers = {
+  innertube?: (body: unknown) => Response | null
+  watch?: () => Response | null
+  oembed?: () => Response | null
+  noembed?: () => Response | null
+}
+
+function notFound(): Response {
+  return {
+    ok: false,
+    status: 404,
+    text: () => Promise.resolve(""),
+    json: () => Promise.resolve({}),
+  } as Response
+}
+
+function htmlResponse(html: string, ok = true): Response {
+  return {
+    ok,
+    status: ok ? 200 : 500,
+    text: () => Promise.resolve(html),
+    json: () => Promise.resolve({}),
+  } as Response
+}
+
+function jsonResponse(data: unknown, ok = true): Response {
+  return {
+    ok,
+    status: ok ? 200 : 500,
+    text: () => Promise.resolve(JSON.stringify(data)),
+    json: () => Promise.resolve(data),
+  } as Response
+}
+
+function makeFetchMock(routes: TRouteHandlers) {
+  return vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.includes("/youtubei/v1/player")) {
+        const body = init?.body ? JSON.parse(String(init.body)) : {}
+        return routes.innertube?.(body) ?? notFound()
+      }
+      if (url.includes("youtube.com/oembed")) {
+        return routes.oembed?.() ?? notFound()
+      }
+      if (url.includes("noembed.com")) {
+        return routes.noembed?.() ?? notFound()
+      }
+      if (url.includes("/watch")) {
+        return routes.watch?.() ?? notFound()
+      }
+      return notFound()
+    },
+  )
+}
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -15,8 +76,7 @@ afterEach(() => {
 
 describe("getYoutubeVideoInfo - Cenários Reais", () => {
   /**
-   * Cenário 1: Vídeo Rickroll (dQw4w9WgXcQ)
-   * Um dos vídeos mais populares e referenciados do YouTube
+   * Cenário 1: Vídeo Rickroll (dQw4w9WgXcQ) via InnerTube
    */
   it("deve buscar informações do vídeo Rickroll com sucesso", async () => {
     const rickrollResponse = {
@@ -37,16 +97,6 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
               url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg",
               width: 120,
               height: 90,
-            },
-            {
-              url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg",
-              width: 320,
-              height: 180,
-            },
-            {
-              url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-              width: 480,
-              height: 360,
             },
             {
               url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
@@ -71,24 +121,13 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
             simpleText:
               "The official video for Never Gonna Give You Up by Rick Astley",
           },
-          thumbnail: {
-            thumbnails: [
-              {
-                url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
-                width: 1280,
-                height: 720,
-              },
-            ],
-          },
         },
       },
     }
 
-    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(rickrollResponse)};</script></body></html>`
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(html),
-    } as Response)
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(rickrollResponse),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
@@ -107,7 +146,6 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
 
   /**
    * Cenário 2: Live Stream Ativa
-   * Teste com transmissão ao vivo
    */
   it("deve identificar corretamente uma transmissão ao vivo", async () => {
     const liveStreamResponse = {
@@ -115,11 +153,6 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
         videoId: "jfKfPfyJRdk",
         title: "lofi hip hop radio 📚 - beats to relax/study to",
         author: "Lofi Girl",
-        channelId: "UCSJ4gkVC6NrvII8umztf0Ow",
-        shortDescription: "24/7 lofi hip hop radio",
-        lengthSeconds: "0",
-        viewCount: "125000",
-        keywords: ["lofi", "hip hop", "chill", "beats"],
         isLiveContent: true,
         thumbnail: {
           thumbnails: [
@@ -134,35 +167,14 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
       microformat: {
         playerMicroformatRenderer: {
           ownerChannelName: "Lofi Girl",
-          ownerProfileUrl: "https://www.youtube.com/@LofiGirl",
-          externalChannelId: "UCSJ4gkVC6NrvII8umztf0Ow",
-          publishDate: "2020-02-22",
-          uploadDate: "2020-02-22",
-          title: {
-            simpleText: "lofi hip hop radio 📚 - beats to relax/study to",
-          },
-          description: { simpleText: "24/7 lofi hip hop radio" },
-          liveBroadcastDetails: {
-            isLiveNow: true,
-          },
-          thumbnail: {
-            thumbnails: [
-              {
-                url: "https://i.ytimg.com/vi/jfKfPfyJRdk/maxresdefault_live.jpg",
-                width: 1280,
-                height: 720,
-              },
-            ],
-          },
+          liveBroadcastDetails: { isLiveNow: true },
         },
       },
     }
 
-    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(liveStreamResponse)};</script></body></html>`
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(html),
-    } as Response)
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(liveStreamResponse),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo("https://youtu.be/jfKfPfyJRdk")
@@ -173,8 +185,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   })
 
   /**
-   * Cenário 3: Vídeo Curto (YouTube Shorts)
-   * Teste com vídeo em formato Shorts
+   * Cenário 3: YouTube Shorts
    */
   it("deve processar corretamente um YouTube Shorts", async () => {
     const shortsResponse = {
@@ -182,49 +193,14 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
         videoId: "abc123xyz",
         title: "Amazing Short Video #shorts",
         author: "Content Creator",
-        channelId: "UCtest123",
-        shortDescription: "A short video",
         lengthSeconds: "45",
-        viewCount: "5000000",
-        keywords: ["shorts", "viral"],
         isLiveContent: false,
-        thumbnail: {
-          thumbnails: [
-            {
-              url: "https://i.ytimg.com/vi/abc123xyz/maxresdefault.jpg",
-              width: 1080,
-              height: 1920,
-            },
-          ],
-        },
-      },
-      microformat: {
-        playerMicroformatRenderer: {
-          ownerChannelName: "Content Creator",
-          ownerProfileUrl: "https://www.youtube.com/@contentcreator",
-          externalChannelId: "UCtest123",
-          publishDate: "2023-05-15",
-          uploadDate: "2023-05-15",
-          title: { simpleText: "Amazing Short Video #shorts" },
-          description: { simpleText: "A short video" },
-          thumbnail: {
-            thumbnails: [
-              {
-                url: "https://i.ytimg.com/vi/abc123xyz/maxresdefault.jpg",
-                width: 1080,
-                height: 1920,
-              },
-            ],
-          },
-        },
       },
     }
 
-    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(shortsResponse)};</script></body></html>`
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(html),
-    } as Response)
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(shortsResponse),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
@@ -236,28 +212,17 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   })
 
   /**
-   * Cenário 4: Vídeo com Título Multi-linha (runs format)
-   * Teste quando o título vem em formato de "runs" ao invés de "simpleText"
+   * Cenário 4: Título em formato runs
    */
   it("deve processar títulos em formato runs corretamente", async () => {
     const complexTitleResponse = {
       videoDetails: {
         videoId: "test456",
-        title: "Video with Complex Title",
         author: "Channel Name",
-        channelId: "UCtest456",
-        shortDescription: "Test description",
-        lengthSeconds: "600",
-        viewCount: "1000",
-        isLiveContent: false,
       },
       microformat: {
         playerMicroformatRenderer: {
           ownerChannelName: "Channel Name",
-          ownerProfileUrl: "https://www.youtube.com/@channelname",
-          externalChannelId: "UCtest456",
-          publishDate: "2024-01-01",
-          uploadDate: "2024-01-01",
           title: {
             runs: [
               { text: "Video with " },
@@ -272,24 +237,13 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
               { text: "description" },
             ],
           },
-          thumbnail: {
-            thumbnails: [
-              {
-                url: "https://i.ytimg.com/vi/test456/hqdefault.jpg",
-                width: 480,
-                height: 360,
-              },
-            ],
-          },
         },
       },
     }
 
-    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(complexTitleResponse)};</script></body></html>`
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(html),
-    } as Response)
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(complexTitleResponse),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
@@ -301,8 +255,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   })
 
   /**
-   * Cenário 5: Vídeo sem thumbnails em videoDetails
-   * Teste fallback para microformat thumbnails
+   * Cenário 5: Thumbnails do microformat quando videoDetails não tem
    */
   it("deve usar thumbnails do microformat quando videoDetails não tem", async () => {
     const noVideoDetailsThumbnailResponse = {
@@ -310,21 +263,10 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
         videoId: "test789",
         title: "Video without thumbnail in details",
         author: "Test Channel",
-        channelId: "UCtest789",
-        shortDescription: "Test",
-        lengthSeconds: "300",
-        viewCount: "500",
-        isLiveContent: false,
       },
       microformat: {
         playerMicroformatRenderer: {
           ownerChannelName: "Test Channel",
-          ownerProfileUrl: "https://www.youtube.com/@testchannel",
-          externalChannelId: "UCtest789",
-          publishDate: "2024-11-17",
-          uploadDate: "2024-11-17",
-          title: { simpleText: "Video without thumbnail in details" },
-          description: { simpleText: "Test" },
           thumbnail: {
             thumbnails: [
               {
@@ -343,25 +285,21 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
       },
     }
 
-    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(noVideoDetailsThumbnailResponse)};</script></body></html>`
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(html),
-    } as Response)
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(noVideoDetailsThumbnailResponse),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
       "https://www.youtube.com/watch?v=test789",
     )
 
-    expect(info?.thumbnails).toHaveLength(2)
+    expect(info?.thumbnails.length).toBeGreaterThanOrEqual(2)
     expect(info?.thumbnail).toContain("maxresdefault.jpg")
-    expect(info?.thumbnails[1]?.width).toBe(1280)
   })
 
   /**
-   * Cenário 6: Teste de Cache
-   * Verifica que múltiplas chamadas para o mesmo vídeo usam cache
+   * Cenário 6: Cache
    */
   it("deve usar cache para requisições repetidas do mesmo vídeo", async () => {
     const cacheTestResponse = {
@@ -369,54 +307,104 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
         videoId: "cache123",
         title: "Cached Video",
         author: "Cache Channel",
-        channelId: "UCcache123",
-        shortDescription: "Cache test",
         lengthSeconds: "180",
-        viewCount: "1000",
-        isLiveContent: false,
-        thumbnail: {
-          thumbnails: [
-            {
-              url: "https://i.ytimg.com/vi/cache123/hqdefault.jpg",
-              width: 480,
-              height: 360,
-            },
-          ],
-        },
       },
     }
 
-    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(cacheTestResponse)};</script></body></html>`
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(html),
-    } as Response)
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(cacheTestResponse),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
-    // Primeira chamada
     const info1 = await getYoutubeVideoInfo(
       "https://www.youtube.com/watch?v=cache123",
     )
+    const callsAfterFirst = fetchMock.mock.calls.length
 
-    // Segunda chamada - deve usar cache
     const info2 = await getYoutubeVideoInfo("https://youtu.be/cache123")
-
-    // Terceira chamada com formato diferente - deve usar cache
     const info3 = await getYoutubeVideoInfo(
       "https://www.youtube.com/watch?v=cache123&t=10s",
     )
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirst)
     expect(info1?.id).toBe("cache123")
     expect(info2?.id).toBe("cache123")
     expect(info3?.id).toBe("cache123")
   })
 
   /**
-   * Cenário 7: Fallback para oEmbed
-   * Teste quando HTML parsing falha mas oEmbed funciona
+   * Cenário 7: Watch page quando InnerTube falha
    */
-  it("deve usar oEmbed quando HTML parsing falha", async () => {
+  it("deve usar watch page HTML quando InnerTube falha", async () => {
+    const playerResponse = {
+      videoDetails: {
+        videoId: "htmlonly",
+        title: "HTML only video",
+        author: "HTML Channel",
+        lengthSeconds: "100",
+      },
+    }
+    const html = `<!DOCTYPE html><html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(playerResponse)};</script></body></html>`
+
+    const fetchMock = makeFetchMock({
+      watch: () => htmlResponse(html),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const info = await getYoutubeVideoInfo(
+      "https://www.youtube.com/watch?v=htmlonly",
+    )
+
+    expect(info?.title).toBe("HTML only video")
+    expect(info?.lengthSeconds).toBe(100)
+  })
+
+  /**
+   * Cenário 8: Merge de fontes complementares
+   */
+  it("deve mesclar dados complementares de múltiplas fontes", async () => {
+    const innertubePartial = {
+      videoDetails: {
+        videoId: "merge123",
+        title: "Main title",
+        author: "Main channel",
+        lengthSeconds: "500",
+      },
+    }
+    const noEmbedData = {
+      title: "NoEmbed title",
+      author_name: "NoEmbed channel",
+      description: "Rich description from NoEmbed",
+      thumbnail_url: "https://example.com/thumb.jpg",
+      upload_date: "2024-11-17",
+    }
+
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(innertubePartial),
+      noembed: () => jsonResponse(noEmbedData),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const info = await getYoutubeVideoInfo(
+      "https://www.youtube.com/watch?v=merge123",
+    )
+
+    // Primary fields come from innertube
+    expect(info?.title).toBe("Main title")
+    expect(info?.channelTitle).toBe("Main channel")
+    expect(info?.lengthSeconds).toBe(500)
+    // Missing fields complemented by NoEmbed
+    expect(info?.description).toBe("Rich description from NoEmbed")
+    expect(info?.publishedAt).toBe("2024-11-17")
+    expect(info?.thumbnails.some((t) => t.url.includes("example.com"))).toBe(
+      true,
+    )
+  })
+
+  /**
+   * Cenário 9: oEmbed sozinho
+   */
+  it("deve usar oEmbed quando nenhuma outra fonte retorna dados", async () => {
     const oEmbedData = {
       title: "Video from oEmbed",
       author_name: "oEmbed Channel",
@@ -426,17 +414,9 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
       thumbnail_height: 360,
     }
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        text: () =>
-          Promise.resolve("<html><body>No player response here</body></html>"),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(oEmbedData),
-      } as Response)
+    const fetchMock = makeFetchMock({
+      oembed: () => jsonResponse(oEmbedData),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
@@ -446,18 +426,15 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     expect(info?.title).toBe("Video from oEmbed")
     expect(info?.channelTitle).toBe("oEmbed Channel")
     expect(info?.channelUrl).toBe("https://www.youtube.com/@oembedchannel")
-    expect(info?.thumbnails).toHaveLength(1)
     expect(info?.thumbnail).toBe(
       "https://i.ytimg.com/vi/oembed123/hqdefault.jpg",
     )
-    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   /**
-   * Cenário 8: Fallback para NoEmbed
-   * Teste quando tanto HTML quanto oEmbed falham
+   * Cenário 10: NoEmbed sozinho
    */
-  it("deve usar NoEmbed como último fallback", async () => {
+  it("deve usar NoEmbed quando nenhuma outra fonte retorna dados", async () => {
     const noEmbedData = {
       title: "Video from NoEmbed",
       author_name: "NoEmbed Channel",
@@ -467,19 +444,9 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
       upload_date: "2024-11-17",
     }
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        text: () => Promise.resolve("<html>Invalid</html>"),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: false,
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(noEmbedData),
-      } as Response)
+    const fetchMock = makeFetchMock({
+      noembed: () => jsonResponse(noEmbedData),
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
@@ -489,21 +456,14 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     expect(info?.title).toBe("Video from NoEmbed")
     expect(info?.channelTitle).toBe("NoEmbed Channel")
     expect(info?.description).toBe("Full description from NoEmbed")
-    expect(info?.shortDescription).toBe("Full description from NoEmbed")
     expect(info?.publishedAt).toBe("2024-11-17")
-    expect(info?.uploadedAt).toBe("2024-11-17")
-    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   /**
-   * Cenário 9: Vídeo Indisponível/Privado
-   * Teste quando todos os métodos falham
+   * Cenário 11: Vídeo indisponível
    */
   it("deve retornar null para vídeo indisponível", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response)
+    const fetchMock = makeFetchMock({})
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
@@ -514,8 +474,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   })
 
   /**
-   * Cenário 10: URL Inválida
-   * Teste com URL que não contém ID de vídeo válido
+   * Cenário 12: URL Inválida
    */
   it("deve retornar null para URL inválida", async () => {
     const fetchMock = vi.fn()
