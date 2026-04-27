@@ -62,6 +62,7 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 | `/date` | Format, relative time, timezone correction, time-spent parsing | [docs/date.md](docs/date.md) |
 | `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
+| `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
 | `/nextjs` | OptimizedImage component | [docs/nextjs.md](docs/nextjs.md) |
 | `/string` | Case conversion, slugify, truncate, time formatting | [docs/string.md](docs/string.md) |
 | `/youtube` | Extract IDs, generate URLs, video info with caching | [docs/youtube.md](docs/youtube.md) |
@@ -83,7 +84,12 @@ yarn add @herowcode/utils
 ```bash
 # /nextjs and /youtube React hook
 npm install react next
+
+# /logger pretty output in dev (Node only — JSON in prod always works)
+npm install -D pino-pretty
 ```
+
+> A Python template covering the same contract is shipped in `templates/python/logger.py` — copy it into your Python services. See [docs/logger.md](docs/logger.md).
 
 ---
 

@@ -87,6 +87,36 @@
         "default": "./dist/function/index.cjs"
       }
     },
+    "./logger": {
+      "browser": {
+        "import": {
+          "types": "./dist/logger/index.browser.d.ts",
+          "default": "./dist/logger/index.browser.js"
+        },
+        "require": {
+          "types": "./dist/logger/index.browser.d.cts",
+          "default": "./dist/logger/index.browser.cjs"
+        }
+      },
+      "node": {
+        "import": {
+          "types": "./dist/logger/index.node.d.ts",
+          "default": "./dist/logger/index.node.js"
+        },
+        "require": {
+          "types": "./dist/logger/index.node.d.cts",
+          "default": "./dist/logger/index.node.cjs"
+        }
+      },
+      "import": {
+        "types": "./dist/logger/index.d.ts",
+        "default": "./dist/logger/index.js"
+      },
+      "require": {
+        "types": "./dist/logger/index.d.cts",
+        "default": "./dist/logger/index.cjs"
+      }
+    },
     "./nextjs": {
       "browser": {
         "import": {
@@ -180,14 +210,19 @@
     "axios": "1.12.2",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.10",
+    "pino": "^9.5.0",
     "tailwind-merge": "3.5.0"
   },
   "peerDependencies": {
     "next": ">=13",
+    "pino-pretty": ">=11",
     "react": ">=18"
   },
   "peerDependenciesMeta": {
     "next": {
+      "optional": true
+    },
+    "pino-pretty": {
       "optional": true
     },
     "react": {
@@ -208,6 +243,7 @@
     "jest-environment-jsdom": "30.1.2",
     "jsdom": "26.1.0",
     "next": "15",
+    "pino-pretty": "^11.3.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "tsup": "8.5.1",

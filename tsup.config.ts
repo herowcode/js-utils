@@ -23,5 +23,5 @@ export default defineConfig({
   treeshake: true,
   target: "es2018",
   platform: "neutral",
-  external: ["node:fs", "node:fs/promises", "node:path", "node:os", "node:crypto", "react", "react-dom", "next", "next/image"],
+  external: ["node:fs", "node:fs/promises", "node:path", "node:os", "node:crypto", "node:module", "react", "react-dom", "next", "next/image", "pino", "pino-pretty", "thread-stream", "sonic-boom"],
 })
