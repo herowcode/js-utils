@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
-import { describe, beforeEach, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { OptimizedImage } from "./optimized-image"
 
 // Mock next/image to a plain <img> so tests run without the Next.js runtime
@@ -22,6 +22,7 @@ vi.mock("next/image", () => ({
       width?: number
       height?: number
     }) => (
+      // biome-ignore lint/performance/noImgElement: this mocks next/image itself, so a plain <img> is required to observe the props it receives
       <img
         src={src}
         alt={alt}
@@ -76,9 +77,7 @@ describe("OptimizedImage", () => {
     })
 
     it("defaults to 100% when width/height are omitted", () => {
-      const { container } = render(
-        <OptimizedImage src="/img.jpg" alt="test" />,
-      )
+      const { container } = render(<OptimizedImage src="/img.jpg" alt="test" />)
       const div = container.firstChild as HTMLElement
       expect(div.style.width).toBe("100%")
       expect(div.style.height).toBe("100%")
@@ -122,7 +121,9 @@ describe("OptimizedImage", () => {
       expect(screen.queryByRole("img")).not.toBeInTheDocument()
 
       act(() => {
-        observerCallback([{ isIntersecting: true } as IntersectionObserverEntry])
+        observerCallback([
+          { isIntersecting: true } as IntersectionObserverEntry,
+        ])
       })
 
       expect(screen.getByRole("img")).toBeInTheDocument()
@@ -138,9 +139,7 @@ describe("OptimizedImage", () => {
     it("shows the default fallback text on image error", () => {
       render(<OptimizedImage src="/bad.jpg" alt="broken" lazyLoad={false} />)
       fireEvent.error(screen.getByRole("img"))
-      expect(
-        screen.getByText("Falha ao carregar a imagem"),
-      ).toBeInTheDocument()
+      expect(screen.getByText("Falha ao carregar a imagem")).toBeInTheDocument()
       expect(screen.queryByRole("img")).not.toBeInTheDocument()
     })
 

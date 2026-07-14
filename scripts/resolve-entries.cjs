@@ -32,7 +32,7 @@ function buildEntries() {
 
   const rootIndex = path.join(SRC, "index.ts")
   if (fs.existsSync(rootIndex)) {
-    entries["index"] = rootIndex
+    entries.index = rootIndex
   }
 
   const dirs = fs
@@ -45,7 +45,13 @@ function buildEntries() {
     const files = fs.readdirSync(dirPath)
 
     for (const file of files) {
-      if (!file.endsWith(".ts") || file.endsWith(".d.ts") || file.endsWith(".test.ts") || file.endsWith(".test.tsx")) continue
+      if (
+        !file.endsWith(".ts") ||
+        file.endsWith(".d.ts") ||
+        file.endsWith(".test.ts") ||
+        file.endsWith(".test.tsx")
+      )
+        continue
       const base = file.replace(/\.tsx?$/, "") // "index" | "index.node" | "index.browser"
       if (!base.startsWith("index")) continue
 
@@ -83,22 +89,36 @@ function buildExports() {
     /** @type {string[]} */
     const variants = []
     for (const file of files) {
-      if (!file.endsWith(".ts") || file.endsWith(".d.ts") || file.endsWith(".test.ts") || file.endsWith(".test.tsx")) continue
+      if (
+        !file.endsWith(".ts") ||
+        file.endsWith(".d.ts") ||
+        file.endsWith(".test.ts") ||
+        file.endsWith(".test.tsx")
+      )
+        continue
       const base = file.replace(/\.tsx?$/, "")
       if (base.startsWith("index")) variants.push(base)
     }
 
     // A dir is a valid module if it has any index variant (not just index.ts)
-    const hasAnyIndex = variants.some((v) => v === "index" || v.startsWith("index."))
+    const hasAnyIndex = variants.some(
+      (v) => v === "index" || v.startsWith("index."),
+    )
     if (!hasAnyIndex) continue
 
     const subpath = `./${dir}`
 
     // Condition variants (e.g. "browser", "node") come first
-    const conditionVariants = CONDITION_VARIANTS.filter((v) => variants.includes(`index.${v}`))
+    const conditionVariants = CONDITION_VARIANTS.filter((v) =>
+      variants.includes(`index.${v}`),
+    )
     // Unknown extra variants also get a condition based on their suffix
     const extraVariants = variants
-      .filter((v) => v !== "index" && !CONDITION_VARIANTS.map((c) => `index.${c}`).includes(v))
+      .filter(
+        (v) =>
+          v !== "index" &&
+          !CONDITION_VARIANTS.map((c) => `index.${c}`).includes(v),
+      )
       .map((v) => v.replace(/^index\./, ""))
 
     /** @type {Record<string, unknown>} */
@@ -114,8 +134,8 @@ function buildExports() {
     // Fallback (no condition) — only when a plain index.ts exists
     if (variants.includes("index")) {
       const fallback = makeConditions(`${dir}/index`)
-      entry["import"] = fallback["import"]
-      entry["require"] = fallback["require"]
+      entry.import = fallback.import
+      entry.require = fallback.require
     }
 
     exports_[subpath] = entry

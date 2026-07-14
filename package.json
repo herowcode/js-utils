@@ -184,17 +184,19 @@
   "scripts": {
     "prebuild": "node scripts/sync-exports.cjs",
     "build": "tsup --config tsup.config.ts",
-    "lint": "biome check --write --unsafe && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint --diagnostic-level=error --no-errors-on-unmatched",
+    "lint:fix": "biome check --write --unsafe",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:exports": "node scripts/verify-exports.cjs",
     "test:coverage": "vitest run --coverage",
     "prepare": "pnpm build",
-    "prepublishOnly": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports",
-    "version:patch": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version patch && git push && git push --tags",
-    "version:minor": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version minor && git push && git push --tags",
-    "version:major": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version major && git push && git push --tags"
+    "prepublishOnly": "pnpm typecheck && pnpm lint && pnpm test:run && pnpm build && pnpm test:exports",
+    "version:patch": "pnpm typecheck && pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version patch && git push && git push --tags",
+    "version:minor": "pnpm typecheck && pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version minor && git push && git push --tags",
+    "version:major": "pnpm typecheck && pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version major && git push && git push --tags"
   },
   "keywords": [
     "utils",
@@ -207,7 +209,7 @@
     "dayjs"
   ],
   "dependencies": {
-    "axios": "1.12.2",
+    "axios": "1.18.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.10",
     "pino": "^9.5.0",
@@ -230,7 +232,7 @@
     }
   },
   "devDependencies": {
-    "@biomejs/biome": "2.1.4",
+    "@biomejs/biome": "2.4.8",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.8.0",
     "@testing-library/react": "16.3.0",
@@ -238,17 +240,17 @@
     "@types/node": "25.3.3",
     "@types/react": "19.1.12",
     "@types/react-dom": "19.1.9",
-    "@vitest/coverage-v8": "3.2.4",
-    "@vitest/ui": "3.2.4",
+    "@vitest/coverage-v8": "3.2.7",
+    "@vitest/ui": "3.2.7",
     "jest-environment-jsdom": "30.1.2",
     "jsdom": "26.1.0",
-    "next": "15",
+    "next": "15.5.20",
     "pino-pretty": "^11.3.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "tsup": "8.5.1",
-    "typescript": "^5.2.2",
-    "vitest": "3.2.4"
+    "typescript": "^7.0.2",
+    "vitest": "3.2.7"
   },
   "author": {
     "name": "Judson Junior",
@@ -268,7 +270,22 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "@biomejs/biome"
-    ]
+    ],
+    "overrides": {
+      "glob@>=10.2.0 <10.5.0": ">=10.5.0",
+      "minimatch@>=9.0.0 <9.0.7": ">=9.0.7",
+      "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
+      "flatted@<=3.4.1": ">=3.4.2",
+      "brace-expansion@>=2.0.0 <2.0.3": ">=2.0.3",
+      "picomatch@<2.3.2": ">=2.3.2",
+      "picomatch@>=4.0.0 <4.0.4": ">=4.0.4",
+      "follow-redirects@<=1.15.11": ">=1.16.0",
+      "postcss@<8.5.10": ">=8.5.10",
+      "ws@>=8.0.0 <8.21.0": ">=8.21.0",
+      "esbuild@>=0.27.3 <0.28.1": ">=0.28.1",
+      "form-data@>=4.0.0 <4.0.6": ">=4.0.6",
+      "vite@>=7.0.0 <=7.3.4": ">=7.3.5 <8"
+    }
   },
   "packageManager": "pnpm@10.30.1"
 }
