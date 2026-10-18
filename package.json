@@ -238,7 +238,8 @@
     "overrides": {
       "rollup": "4.59.0",
       "postcss": "8.5.23",
-      "ws": "8.21.0"
+      "ws": "8.21.0",
+      "source-map-js": "1.2.2"
     }
   },
   "packageManager": "pnpm@10.30.1"
