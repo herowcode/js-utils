@@ -120,6 +120,17 @@ const locales: Record<string, ILocaleTranslations> = {
   },
 }
 
+function resolveTranslations(locale: string): ILocaleTranslations {
+  if (Object.hasOwn(locales, locale)) {
+    return locales[locale]
+  }
+  const language = String(locale).split(/[-_]/)[0].toLowerCase()
+  const match = Object.keys(locales).find(
+    (key) => key.split("-")[0].toLowerCase() === language,
+  )
+  return locales[match ?? "pt-BR"]
+}
+
 // Return shape
 export interface ITimeSpent {
   years: number
@@ -140,6 +151,10 @@ export function parseTimeSpent(
 ): ITimeSpent {
   const final = fixTimezoneOffset(finalDate)
   const initial = fixTimezoneOffset(initialDate)
+
+  if (!final.isValid() || !initial.isValid()) {
+    throw new RangeError("Invalid time value")
+  }
 
   const years = final.diff(initial, "year")
   const months = final.diff(initial.add(years, "year"), "month")
@@ -170,7 +185,7 @@ export function parseTimeSpent(
   )
 
   // Use default locale if the requested one isn't supported
-  const translations = locales[locale] || locales["pt-BR"]
+  const translations = resolveTranslations(locale)
 
   // Build verbose parts (localized words)
   const verboseParts: string[] = []

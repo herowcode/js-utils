@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import {
+  dayjs,
   resetDayjsGlobalIntl,
   resolveDayjsIntlConfig,
   setDayjsGlobalIntl,
@@ -199,5 +200,32 @@ describe("formatDate", () => {
 
     const result = formatDate(testDate)
     expect(result).toMatch(/12\/25\/23/)
+  })
+
+  describe("locale vs format detection", () => {
+    const sample = new Date("2023-12-25T12:00:00Z")
+
+    it("should honor an Intl.Locale instance", () => {
+      expect(formatDate(sample, new Intl.Locale("en-US"))).toBe(
+        formatDate(sample, "en-US"),
+      )
+      expect(formatDate(sample, new Intl.Locale("en-US"))).toContain("December")
+    })
+
+    it.each(["MM", "DD", "MMM", "YYYY", "YY", "HH", "mm", "DD/MM/YYYY"])(
+      "should treat %s as a dayjs format",
+      (token) => {
+        const expected = dayjs(sample).format(token)
+        expect(formatDate(sample, token)).toBe(expected)
+      },
+    )
+
+    it.each([
+      ["en-US", "December"],
+      ["pt-BR", "dezembro"],
+      ["fr", "décembre"],
+    ])("should treat %s as a locale", (locale, month) => {
+      expect(formatDate(sample, locale)).toContain(month)
+    })
   })
 })

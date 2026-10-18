@@ -170,4 +170,27 @@ describe("parseTimeSpent", () => {
     expect(result.seconds).toBe(0)
     expect(result.formatted).toBe("")
   })
+
+  it.each([
+    ["en", "2 years, 3 months, and 15 days"],
+    ["en-GB", "2 years, 3 months, and 15 days"],
+    ["EN", "2 years, 3 months, and 15 days"],
+    ["es", "2 años, 3 meses y 15 días"],
+    ["fr_CA", "2 ans, 3 mois et 15 jours"],
+    ["pt", "2 anos, 3 meses e 15 dias"],
+  ])("should match locale %s by language prefix", (locale, expected) => {
+    expect(parseTimeSpent("2020-01-01", "2022-04-16", locale).formatted).toBe(
+      expected,
+    )
+  })
+
+  it("should throw a RangeError for an invalid initial date", () => {
+    expect(() => parseTimeSpent("not-a-date", "2022-04-16")).toThrow(RangeError)
+  })
+
+  it("should throw a RangeError for an invalid final date", () => {
+    expect(() => parseTimeSpent("2020-01-01", new Date("nope"))).toThrow(
+      RangeError,
+    )
+  })
 })

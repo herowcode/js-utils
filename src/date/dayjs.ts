@@ -10,8 +10,6 @@ import "dayjs/locale/en.js"
 import "dayjs/locale/es.js"
 import "dayjs/locale/fr.js"
 import "dayjs/locale/pt-br.js"
-// Ensure TS sees Dayjs instance augmentation wherever this module is imported
-import type {} from "../types/dayjs-intl"
 
 export interface IDayjsIntlConfig {
   locale?: Intl.LocalesArgument
@@ -21,6 +19,13 @@ export interface IDayjsIntlConfig {
 export interface IDayjsIntlResolvedConfig {
   locale: Intl.LocalesArgument
   options: Intl.DateTimeFormatOptions
+}
+
+declare module "dayjs" {
+  interface Dayjs {
+    formatIntl(config?: IDayjsIntlConfig): string
+    toIntlFormatter(config?: IDayjsIntlConfig): Intl.DateTimeFormat
+  }
 }
 
 const DEFAULT_INTL_CONFIG: IDayjsIntlResolvedConfig = {

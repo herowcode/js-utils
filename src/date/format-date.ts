@@ -25,10 +25,65 @@ type TLocaleOrConfig = Intl.LocalesArgument | IFormatDateConfig
 function isFormatDateConfig(
   value: TLocaleOrConfig,
 ): value is IFormatDateConfig {
+  if (typeof Intl !== "undefined" && value instanceof Intl.Locale) return false
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
+// Case-sensitive on purpose: "ss" (Swati) stays a locale, "SS" is the fractional-seconds token
+const DAYJS_TOKENS = new Set([
+  "YY",
+  "YYYY",
+  "M",
+  "MM",
+  "MMM",
+  "MMMM",
+  "D",
+  "DD",
+  "Do",
+  "d",
+  "dd",
+  "ddd",
+  "dddd",
+  "H",
+  "HH",
+  "h",
+  "hh",
+  "m",
+  "mm",
+  "s",
+  "S",
+  "SS",
+  "SSS",
+  "Z",
+  "ZZ",
+  "A",
+  "a",
+  "X",
+  "x",
+  "Q",
+  "k",
+  "kk",
+  "w",
+  "ww",
+  "W",
+  "WW",
+  "z",
+  "zzz",
+  "L",
+  "LL",
+  "LLL",
+  "LLLL",
+  "l",
+  "ll",
+  "lll",
+  "llll",
+  "LT",
+  "LTS",
+])
+
 function isValidLocaleTag(value: string): boolean {
+  if (DAYJS_TOKENS.has(value)) return false
+
   if (
     typeof Intl !== "undefined" &&
     typeof Intl.getCanonicalLocales === "function"
