@@ -4,47 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-```bash
-pnpm build          # Sync exports + compile with tsup (CJS + ESM)
-pnpm lint           # Biome check with auto-fix
-pnpm test           # Vitest in watch mode
-pnpm test:run       # Vitest single run
-pnpm test:coverage  # Coverage report (V8)
-```
+- Run tests with `pnpm test:run` or `pnpm vitest run <file>`. `pnpm test` is watch mode and never exits.
+- `pnpm lint` rewrites files (`biome check --write --unsafe`) before running `tsc`; review the diff after it. For read-only checks use the Health Stack below.
+- `pnpm build` regenerates `exports` in `package.json` (prebuild runs `scripts/sync-exports.cjs`). Never edit `exports` by hand, and commit the regenerated map: CI publishes whatever is committed.
 
-Run a single test file:
-```bash
-pnpm vitest run src/string/capitalize.test.ts
-```
+## Modules
 
-## Architecture
+- Each `src/<module>/index.ts` is a public subpath; `index.browser.ts` / `index.node.ts` add env conditions. Entry files must be `.ts`: an `index.tsx` is silently skipped.
+- Adding a module or a browser/node-split function: use the `add-module` skill, several steps are manual.
+- When a public function's signature or behavior changes, update `docs/<module>.md`. When a module is added or removed, update the Modules table in `README.md` and `docs/pt-br/README.md`.
+- Biome naming: interfaces `I*`, type aliases `T*`, enums `E*` with CONSTANT_CASE members.
 
-This is a tree-shakable TypeScript utility library (`@herowcode/utils`) published to npm as both CJS and ESM. It targets ES2018 and supports Node.js and browser environments.
+## Releases
 
-### Module layout
+Release only via `pnpm version:patch|minor|major`: it runs the full gate, then commits, tags and pushes. Any pushed `v*` tag publishes to npm through CI, so never create or push tags by hand.
 
-Each module under `src/` follows the same pattern:
-- `index.ts` — primary export (re-exports all functions)
-- `index.browser.ts` / `index.node.ts` — environment-specific exports (only in `files/` and `youtube/`)
-- Individual function files with inline input validation and TypeScript generics
+## Health Stack
 
-Modules: `api`, `array`, `date`, `files`, `function`, `string`, `youtube`, `types`
-
-### Export sync
-
-`package.json` exports are **auto-generated** by `scripts/sync-exports.cjs` (run as `prebuild`). Do not manually edit the `exports` field in `package.json`.
-
-### Build
-
-`tsup.config.ts` compiles to `dist/` with splitting, treeshaking, sourcemaps, and `.d.ts`/`.d.mts` declarations. Node built-ins (`fs`, `path`, `os`, `crypto`) are externalized.
-
-### Linting conventions
-
-Biome enforces:
-- Interfaces prefixed `I*`, type aliases `T*`, enums `E*`, enum members `CONSTANT_CASE`
-- `import type` for type-only imports
-- No unused variables or imports
-
-### Testing
-
-Vitest runs with jsdom environment. Tests live alongside source files as `*.test.ts`. Setup file: `vitest-setup.ts`.
+- typecheck: pnpm tsc --noEmit
+- lint: pnpm biome check .
+- test: pnpm test:run
+- build: pnpm build
+- exports: pnpm test:exports

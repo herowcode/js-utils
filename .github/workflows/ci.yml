@@ -80,3 +80,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Verify exports
+        run: pnpm test:exports

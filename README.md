@@ -63,7 +63,6 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 | `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
 | `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
-| `/nextjs` | OptimizedImage component | [docs/nextjs.md](docs/nextjs.md) |
 | `/string` | Case conversion, slugify, truncate, time formatting | [docs/string.md](docs/string.md) |
 | `/youtube` | Extract IDs, generate URLs, video info with caching | [docs/youtube.md](docs/youtube.md) |
 
@@ -79,12 +78,9 @@ pnpm add @herowcode/utils
 yarn add @herowcode/utils
 ```
 
-**Peer dependencies** (only needed for specific modules):
+**Optional peer dependency:**
 
 ```bash
-# /nextjs and /youtube React hook
-npm install react next
-
 # /logger pretty output in dev (Node only — JSON in prod always works)
 npm install -D pino-pretty
 ```
