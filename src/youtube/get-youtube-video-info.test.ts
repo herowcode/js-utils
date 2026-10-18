@@ -396,3 +396,58 @@ describe("getYoutubeVideoInfo", () => {
     expect(info).toBeNull()
   })
 })
+
+describe("getYoutubeVideoInfo cache limits", () => {
+  const oneHourMs = 60 * 60 * 1000
+
+  function countingFetch() {
+    const calls = new Map<string, number>()
+    const fetchMock = makeFetchMock({
+      innertube: (body) => {
+        const id = (body as { videoId: string }).videoId
+        calls.set(id, (calls.get(id) ?? 0) + 1)
+        return jsonResponse(samplePlayerResponse)
+      },
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    return calls
+  }
+
+  const urlFor = (n: number) =>
+    `https://youtu.be/vid${String(n).padStart(8, "0")}`
+  const idFor = (n: number) => `vid${String(n).padStart(8, "0")}`
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("refetches once a cached entry is older than an hour", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    const calls = countingFetch()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    await getYoutubeVideoInfo(validUrl)
+    vi.advanceTimersByTime(oneHourMs - 1)
+    await getYoutubeVideoInfo(validUrl)
+    expect(calls.get("dQw4w9WgXcQ")).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await getYoutubeVideoInfo(validUrl)
+    expect(calls.get("dQw4w9WgXcQ")).toBe(2)
+  })
+
+  it("keeps at most 100 videos, evicting the least recently used", async () => {
+    const calls = countingFetch()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    for (let n = 0; n < 100; n++) await getYoutubeVideoInfo(urlFor(n))
+    await getYoutubeVideoInfo(urlFor(0)) // touch: 1 becomes the oldest
+    await getYoutubeVideoInfo(urlFor(100))
+
+    await getYoutubeVideoInfo(urlFor(0))
+    await getYoutubeVideoInfo(urlFor(1))
+
+    expect(calls.get(idFor(0))).toBe(1)
+    expect(calls.get(idFor(1))).toBe(2)
+  })
+})

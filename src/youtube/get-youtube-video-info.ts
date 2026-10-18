@@ -75,7 +75,16 @@ export type TYouTubeVideoInfo = {
 
 const FETCH_TIMEOUT_MS = 8000
 
-const videoInfoCache = new Map<string, Promise<TYouTubeVideoInfo | null>>()
+const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_MAX_ENTRIES = 100
+
+type TCacheEntry = {
+  pending: Promise<TYouTubeVideoInfo | null>
+  expiresAt?: number
+}
+
+// Insertion order doubles as LRU order: a hit is re-inserted at the end
+const videoInfoCache = new Map<string, TCacheEntry>()
 
 export async function getYoutubeVideoInfo(
   videoUrl: string,
@@ -84,23 +93,42 @@ export async function getYoutubeVideoInfo(
   const videoId = extractYouTubeId(videoUrl)
   if (!videoId) return null
 
-  let pending = videoInfoCache.get(videoId)
-  if (!pending) {
-    pending = fetchYoutubeVideoInfo(videoId).then(
-      (info) => {
-        if (!info) videoInfoCache.delete(videoId)
-        return info
-      },
-      (error) => {
-        videoInfoCache.delete(videoId)
-        throw error
-      },
-    )
-    videoInfoCache.set(videoId, pending)
+  let entry = videoInfoCache.get(videoId)
+  if (entry?.expiresAt !== undefined && Date.now() >= entry.expiresAt) {
+    entry = undefined
+  }
+  videoInfoCache.delete(videoId)
+
+  if (!entry) {
+    const created: TCacheEntry = {
+      pending: fetchYoutubeVideoInfo(videoId).then(
+        (info) => {
+          if (info) created.expiresAt = Date.now() + CACHE_TTL_MS
+          else evict(videoId, created)
+          return info
+        },
+        (error) => {
+          evict(videoId, created)
+          throw error
+        },
+      ),
+    }
+    entry = created
   }
 
-  const info = await pending
+  videoInfoCache.set(videoId, entry)
+  while (videoInfoCache.size > CACHE_MAX_ENTRIES) {
+    const oldest = videoInfoCache.keys().next().value as string
+    videoInfoCache.delete(oldest)
+  }
+
+  const info = await entry.pending
   return info && cloneVideoInfo(info)
+}
+
+// Only drop the entry this request created, never a newer one for the same id
+function evict(videoId: string, entry: TCacheEntry): void {
+  if (videoInfoCache.get(videoId) === entry) videoInfoCache.delete(videoId)
 }
 
 function cloneVideoInfo(info: TYouTubeVideoInfo): TYouTubeVideoInfo {

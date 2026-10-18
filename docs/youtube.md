@@ -109,7 +109,7 @@ All sources run in parallel via `Promise.allSettled`. Each field uses the first 
 
 The InnerTube endpoint is used first because it works reliably from datacenter/containerized environments where YouTube serves a consent page to the regular watch URL. If one source returns partial data, another may fill the gaps (e.g. InnerTube provides `description`/`lengthSeconds` while oEmbed contributes an additional thumbnail size).
 
-Concurrent calls for the same video ID share a single in-flight request. Failed requests are evicted from cache so the next call retries. Each request aborts after 8 seconds. Every call returns its own copy of the result, so mutating it does not affect the cache. Returns `null` only if **all** sources fail.
+Concurrent calls for the same video ID share a single in-flight request. Results are cached per video ID for 1 hour, keeping at most the 100 most recently used videos. Failed requests are evicted from cache so the next call retries. Each request aborts after 8 seconds. Every call returns its own copy of the result, so mutating it does not affect the cache. Returns `null` only if **all** sources fail.
 
 ### Return type
 
