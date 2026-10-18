@@ -26,6 +26,8 @@ const defaultRetryConfig: Required<IRetryOptions> = {
 }
 
 const MAX_RETRY_LIMIT = 10
+// setTimeout fires immediately for delays above 2^31-1 ms
+const MAX_TIMER_DELAY = 2 ** 31 - 1
 const MAX_BODY_SNIPPET = 200
 
 function buildQueryString(
@@ -138,7 +140,10 @@ async function fetchWithRetry(
   )
   const statusCodes = retry?.statusCodes ?? defaultRetryConfig.statusCodes
   const backoffLimit = retry?.backoffLimit ?? defaultRetryConfig.backoffLimit
-  const maxRetryAfter = retry?.maxRetryAfter ?? defaultRetryConfig.maxRetryAfter
+  const maxRetryAfter = Math.min(
+    Math.max(retry?.maxRetryAfter ?? defaultRetryConfig.maxRetryAfter, 0),
+    MAX_TIMER_DELAY,
+  )
   const retryable = methods.includes(request.method.toLowerCase())
   let attempt = 0
 
@@ -180,6 +185,8 @@ function parseRetryAfter(value: string | null): number | undefined {
   if (value === null) return undefined
   const trimmed = value.trim()
   if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1000
+  // Date.parse accepts "1.5" or "-1" as dates; only real HTTP dates go through it
+  if (/^[+-]?[\d.]+$/.test(trimmed)) return undefined
   const date = Date.parse(trimmed)
   if (Number.isNaN(date)) return undefined
   return Math.max(date - Date.now(), 0)
@@ -204,8 +211,11 @@ function withTimeout(
   signal: AbortSignal | null | undefined,
   timeout: number | undefined,
 ): AbortSignal | null | undefined {
-  if (timeout === undefined) return signal
-  const timeoutSignal = AbortSignal.timeout(timeout)
+  // 0, negative and non-finite values mean no timeout; 0 lets a request opt out of the client default
+  if (timeout === undefined || !Number.isFinite(timeout) || timeout <= 0) {
+    return signal
+  }
+  const timeoutSignal = AbortSignal.timeout(Math.ceil(timeout))
   return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
 }
 
@@ -244,9 +254,10 @@ async function api<T>(
   // Apply default options
   const init: ICustomRequestInit = {
     credentials: "include",
-    ...(config.redirect && { redirect: config.redirect }),
     ...options,
   }
+  const redirect = options.redirect ?? config.redirect
+  if (redirect) init.redirect = redirect
 
   let body: RequestInit["body"]
   if (options.json !== undefined && options.json !== null) {

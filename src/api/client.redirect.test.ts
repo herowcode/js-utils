@@ -14,10 +14,15 @@ describe("apiClient redirect policy", () => {
     mockFetch.mockImplementation(() => Promise.resolve(new Response("{}")))
   })
 
-  it("follows redirects by default", async () => {
-    await apiClient({ baseURL: "https://api.example.com" }).get("/x")
+  it("keeps the client policy when a request passes redirect: undefined", async () => {
+    const client = apiClient({
+      baseURL: "https://api.example.com",
+      redirect: "error",
+    })
 
-    expect(sentRequest().redirect).toBe("follow")
+    await client.get("/x", { redirect: undefined })
+
+    expect(sentRequest().redirect).toBe("error")
   })
 
   it("applies the client-level redirect policy to every request", async () => {

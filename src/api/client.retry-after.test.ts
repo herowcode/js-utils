@@ -87,6 +87,36 @@ describe("apiClient retry backoff", () => {
     await promise
   })
 
+  it.each(["1.5", "-1", "+2"])(
+    "falls back to backoff for a numeric-looking but invalid Retry-After (%s)",
+    async (value) => {
+      mockFetch
+        .mockResolvedValueOnce(response(503, { "Retry-After": value }))
+        .mockResolvedValueOnce(response(200))
+
+      const promise = client.get("/x")
+      await vi.advanceTimersByTimeAsync(149)
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      await promise
+    },
+  )
+
+  it("clamps maxRetryAfter so a huge Retry-After cannot overflow setTimeout", async () => {
+    mockFetch
+      .mockResolvedValueOnce(response(503, { "Retry-After": "3000000" }))
+      .mockResolvedValueOnce(response(200))
+
+    const promise = client.get("/x", {
+      retry: { maxRetryAfter: Number.POSITIVE_INFINITY },
+    })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2 ** 31)
+    expect((await promise).error).toBeNull()
+  })
+
   it.each([
     [0, 100],
     [0.5, 150],

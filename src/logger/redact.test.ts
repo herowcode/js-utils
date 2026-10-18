@@ -137,6 +137,20 @@ describe("browserRedact", () => {
       })
     })
 
+    it("parses an unclosed bracket path in linear time", () => {
+      const start = performance.now()
+      browserRedact({ a: 1 }, [`a[${" ".repeat(5000)}`])
+      expect(performance.now() - start).toBeLessThan(100)
+    })
+
+    it("trims spaces inside unquoted brackets", () => {
+      expect(
+        browserRedact({ rows: [{ pan: "1" }] }, ["rows[ 0 ].pan"]),
+      ).toEqual({
+        rows: [{ pan: "[REDACTED]" }],
+      })
+    })
+
     it("redacts a whole subtree named by a path", () => {
       expect(browserRedact({ req: { body: { a: 1 } } }, ["req.body"])).toEqual({
         req: { body: "[REDACTED]" },

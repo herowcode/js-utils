@@ -25,7 +25,9 @@ export function reportYouTubeError(
   error: IYouTubeSourceError,
 ): void {
   try {
-    options?.onError?.(error)
+    const result: unknown = options?.onError?.(error)
+    // An async callback's rejection would otherwise surface as an unhandled rejection
+    if (result instanceof Promise) result.catch(() => {})
   } catch {
     // A failing callback must not change the result
   }

@@ -163,12 +163,12 @@ log.info("share_link_clicked", { feature: "share-link", channel: "whatsapp" })
 
 - `info` in production. Override at runtime via `localStorage.LOG_LEVEL = 'debug'`
   to debug a live session without redeploying.
+- `debug` in development.
 
 Production means `process.env.NODE_ENV === 'production'` as inlined by your
 bundler (webpack, Next.js, Vite and esbuild `define` all replace that exact
 expression). With no bundler and no `process`, the logger falls back to
 development.
-- `debug` in development.
 
 ### Redaction
 

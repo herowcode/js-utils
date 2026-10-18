@@ -91,11 +91,6 @@ export async function getYoutubeVideoDuration(
     return null
   }
 
-  const fail = (
-    message: string,
-    extra?: { status?: number; cause?: unknown },
-  ) => reportYouTubeError(options, { source: "player", message, ...extra })
-
   return await new Promise<string | null>((resolve) => {
     const iframeId = `yt-duration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     const iframe = document.createElement("iframe")
@@ -120,7 +115,9 @@ export async function getYoutubeVideoDuration(
       message: string,
       extra?: { status?: number; cause?: unknown },
     ) {
-      if (!resolved) fail(message, extra)
+      if (!resolved) {
+        reportYouTubeError(options, { source: "player", message, ...extra })
+      }
       cleanupAndResolve(null)
     }
 

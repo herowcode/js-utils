@@ -150,11 +150,14 @@ function cloneVideoInfo(info: TYouTubeVideoInfo): TYouTubeVideoInfo {
   }
 }
 
-const SOURCES: readonly TYouTubeErrorSource[] = [
-  "innertube",
-  "watch-page",
-  "oembed",
-  "noembed",
+const SOURCES: readonly [
+  TYouTubeErrorSource,
+  (videoId: string, watchUrl: string) => Promise<TYouTubeVideoInfo>,
+][] = [
+  ["innertube", fetchFromInnertube],
+  ["watch-page", fetchFromWatchPage],
+  ["oembed", fetchFromOEmbed],
+  ["noembed", fetchFromNoEmbed],
 ]
 
 async function fetchYoutubeVideoInfo(
@@ -163,12 +166,9 @@ async function fetchYoutubeVideoInfo(
 ): Promise<TYouTubeVideoInfo | null> {
   const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
 
-  const results = await Promise.allSettled([
-    fetchFromInnertube(videoId, watchUrl),
-    fetchFromWatchPage(videoId, watchUrl),
-    fetchFromOEmbed(videoId, watchUrl),
-    fetchFromNoEmbed(videoId, watchUrl),
-  ])
+  const results = await Promise.allSettled(
+    SOURCES.map(([, fetchSource]) => fetchSource(videoId, watchUrl)),
+  )
 
   const sources: TYouTubeVideoInfo[] = []
   results.forEach((result, i) => {
@@ -178,7 +178,7 @@ async function fetchYoutubeVideoInfo(
     }
     const reason = result.reason as { message?: unknown; status?: unknown }
     reportYouTubeError(options, {
-      source: SOURCES[i],
+      source: SOURCES[i][0],
       message: String(reason?.message ?? reason),
       status: typeof reason?.status === "number" ? reason.status : undefined,
       cause: result.reason,

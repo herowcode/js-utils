@@ -26,37 +26,45 @@ const DEFAULT_REDACT_KEYS = new Set([
 
 const REDACTED = "[REDACTED]"
 
-interface IRedactRules {
+export interface IRedactRules {
   keys: Set<string>
   paths: string[][]
 }
 
-const PATH_SEGMENT = /\[\s*(?:"([^"]*)"|'([^']*)'|([^\]]*?))\s*\]|([^.[\]]+)/g
+const PATH_SEGMENT = /\[(?:"([^"]*)"|'([^']*)'|([^\]]*))\]|([^.[\]]+)/g
 
 // Same syntax as pino/fast-redact: `a.b`, `a["b-c"]`, `a[0]`, `*` / `[*]` for one segment
 function parsePath(path: string): string[] {
   return Array.from(path.matchAll(PATH_SEGMENT), (m) =>
-    (m[1] ?? m[2] ?? m[3] ?? m[4]).toLowerCase(),
+    (m[1] ?? m[2] ?? m[3]?.trim() ?? m[4]).toLowerCase(),
   )
 }
 
-// Plain keys match at any depth (stricter than pino's top-level only); entries with `.`, `[` or `*` are paths from the root
-export function browserRedact<T>(value: T, extra?: readonly string[]): T {
+// Plain keys match at any depth (broader than pino's top-level only); entries with `.`, `[` or `*` are paths from the root
+export function compileRedactRules(extra?: readonly string[]): IRedactRules {
   const rules: IRedactRules = { keys: new Set(DEFAULT_REDACT_KEYS), paths: [] }
   for (const entry of extra ?? []) {
     if (/[.[*]/.test(entry)) rules.paths.push(parsePath(entry))
     else rules.keys.add(entry.toLowerCase())
   }
+  return rules
+}
+
+export function redactWith<T>(value: T, rules: IRedactRules): T {
   return walk(value, rules, [], new WeakSet()) as T
 }
 
+export function browserRedact<T>(value: T, extra?: readonly string[]): T {
+  return redactWith(value, compileRedactRules(extra))
+}
+
+// Path segments are lowercased when built, matching the compiled rules
 function isRedacted(rules: IRedactRules, path: string[]): boolean {
-  const key = path[path.length - 1].toLowerCase()
-  if (rules.keys.has(key)) return true
+  if (rules.keys.has(path[path.length - 1])) return true
   return rules.paths.some(
     (pattern) =>
       pattern.length === path.length &&
-      pattern.every((seg, i) => seg === "*" || seg === path[i].toLowerCase()),
+      pattern.every((seg, i) => seg === "*" || seg === path[i]),
   )
 }
 
@@ -67,7 +75,7 @@ function walkChild(
   path: string[],
   ancestors: WeakSet<object>,
 ): unknown {
-  const childPath = [...path, key]
+  const childPath = [...path, key.toLowerCase()]
   return isRedacted(rules, childPath)
     ? REDACTED
     : walk(value, rules, childPath, ancestors)

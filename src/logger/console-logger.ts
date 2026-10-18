@@ -1,4 +1,4 @@
-import { browserRedact } from "./redact"
+import { compileRedactRules, type IRedactRules, redactWith } from "./redact"
 import type {
   ICreateLoggerOptions,
   ILogger,
@@ -68,7 +68,7 @@ interface IBrowserLoggerState {
   service: string
   level: TLogLevel
   bindings: TLogContext
-  redact: readonly string[] | undefined
+  redact: IRedactRules
 }
 
 function emit(
@@ -80,7 +80,7 @@ function emit(
   if (LEVEL_ORDER[level] < LEVEL_ORDER[state.level]) return
 
   // Redact bindings and context together so paths resolve from the log root, as in pino
-  const merged = browserRedact(
+  const merged = redactWith(
     { ...state.bindings, ...serializeErr(ctx) },
     state.redact,
   )
@@ -137,6 +137,6 @@ export function createLogger(opts: ICreateLoggerOptions): ILogger {
     service: opts.service,
     level: resolveLevel(opts),
     bindings: opts.bindings ?? {},
-    redact: opts.redact,
+    redact: compileRedactRules(opts.redact),
   })
 }

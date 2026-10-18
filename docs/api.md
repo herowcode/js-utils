@@ -39,12 +39,12 @@ await client.delete('/users/1');
 | `getAccessToken` | `() => Promise<string \| null>` | Called before every request; result injected as `Authorization: Bearer`. Only sent when the request origin equals the `baseURL` origin |
 | `onSignoutUnauthorized` | `(body?: unknown) => void` | Called on 401 responses, except when the URL path contains `signin`, `sign-in` or `login`. Errors thrown by the callback are ignored |
 | `getUserIP` | `() => Promise<string \| undefined>` | Called before every request; result injected as `X-User-IP`. Only sent when the request origin equals the `baseURL` origin |
-| `timeout` | `number` | Default request timeout in ms. Unset means no timeout |
+| `timeout` | `number` | Default request timeout in ms. Unset, `0`, negative or non-finite means no timeout |
 | `redirect` | `RequestRedirect` | Default `redirect` mode (`"follow"`, `"error"` or `"manual"`). Unset means the fetch default, `"follow"` |
 
 ### Timeouts
 
-Pass `timeout` (ms) per request or on the client; the per-request value wins. It is one deadline for the whole call, retries and backoff waits included, and it is combined with your own `signal` so either can abort. A timed-out request fails with a `TimeoutError` and is not retried.
+Pass `timeout` (ms) per request or on the client; the per-request value wins, and `timeout: 0` opts a request out of the client default. Fractions round up to whole milliseconds. It is one deadline for the network requests, retries and backoff waits (not for `getAccessToken`, `getUserIP` or `onSignoutUnauthorized`), and it is combined with your own `signal` so either can abort. A timed-out request is not retried and resolves with `error` set from the `TimeoutError` abort reason.
 
 ```typescript
 const { data, error } = await client.get('/slow', { timeout: 5000 });

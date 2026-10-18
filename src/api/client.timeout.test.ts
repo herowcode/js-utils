@@ -110,4 +110,55 @@ describe("apiClient timeout", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(result.error).not.toBeNull()
   })
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "ignores an invalid timeout (%s)",
+    async (timeout) => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(jsonResponse(200, { ok: true }))
+
+      const result = await client.get("/x", { timeout })
+
+      expect(timeoutSpy).not.toHaveBeenCalled()
+      expect(result.data).toEqual({ ok: true })
+    },
+  )
+
+  it("lets timeout: 0 opt a request out of the client-level timeout", async () => {
+    const client = apiClient({
+      baseURL: "https://api.example.com",
+      timeout: 5000,
+    })
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, {}))
+
+    await client.get("/x", { timeout: 0 })
+
+    expect(timeoutSpy).not.toHaveBeenCalled()
+  })
+
+  it("rounds a fractional timeout up to whole milliseconds", async () => {
+    const client = apiClient({ baseURL: "https://api.example.com" })
+    mockFetch.mockResolvedValueOnce(jsonResponse(200, {}))
+
+    await client.get("/x", { timeout: 1.5 })
+
+    expect(timeoutSpy).toHaveBeenCalledWith(2)
+  })
+
+  it("shares one deadline across retry attempts", async () => {
+    const client = apiClient({ baseURL: "https://api.example.com" })
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(503))
+      .mockImplementationOnce(hangUntilAborted)
+
+    const promise = client.get("/x", { timeout: 1000 })
+    await vi.advanceTimersByTimeAsync(200)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    timeoutController.abort(timeoutError())
+    const result = await promise
+
+    expect(timeoutSpy).toHaveBeenCalledTimes(1)
+    expect((mockFetch.mock.calls[1][0] as Request).signal.aborted).toBe(true)
+    expect(result.error).not.toBeNull()
+  })
 })
