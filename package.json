@@ -236,7 +236,8 @@
       "@biomejs/biome"
     ],
     "overrides": {
-      "rollup": "4.59.0"
+      "rollup": "4.59.0",
+      "postcss": "8.5.23"
     }
   },
   "packageManager": "pnpm@10.30.1"
