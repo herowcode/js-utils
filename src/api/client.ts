@@ -1,19 +1,21 @@
 import { apiWrapper } from "./wrapper"
 
+export interface IRetryOptions {
+  limit?: number
+  methods?: readonly string[]
+  statusCodes?: readonly number[]
+  backoffLimit?: number
+}
+
 export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
   json?: unknown
   params?: Record<string, string | number | boolean | null | undefined>
   /** Total time in ms for the request, retries and backoff included. */
   timeout?: number
-  retry?: {
-    limit?: number
-    methods?: string[]
-    statusCodes?: number[]
-    backoffLimit?: number
-  }
+  retry?: IRetryOptions
 }
 
-const defaultRetryConfig = {
+const defaultRetryConfig: Required<IRetryOptions> = {
   limit: 5,
   methods: ["get", "head"],
   statusCodes: [408, 429, 500, 502, 503, 504],
@@ -122,7 +124,7 @@ async function discardBody(response: Response): Promise<void> {
 
 async function fetchWithRetry(
   request: Request,
-  retry?: ICustomRequestInit["retry"],
+  retry?: IRetryOptions,
 ): Promise<Response> {
   const limit = Math.min(
     Math.max(retry?.limit ?? defaultRetryConfig.limit, 1),
