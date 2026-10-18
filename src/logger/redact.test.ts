@@ -96,4 +96,51 @@ describe("browserRedact", () => {
     expect(browserRedact(5)).toBe(5)
     expect(browserRedact("s")).toBe("s")
   })
+
+  describe("pino-style paths", () => {
+    it("redacts a dotted path without touching the same key elsewhere", () => {
+      const out = browserRedact(
+        { user: { ssn: "1", name: "a" }, other: { ssn: "2" } },
+        ["user.ssn"],
+      )
+      expect(out).toEqual({
+        user: { ssn: "[REDACTED]", name: "a" },
+        other: { ssn: "2" },
+      })
+    })
+
+    it("matches `*` as exactly one segment", () => {
+      const out = browserRedact(
+        { card: "top", a: { card: "x" }, b: { c: { card: "deep" } } },
+        ["*.card"],
+      )
+      expect(out).toEqual({
+        card: "top",
+        a: { card: "[REDACTED]" },
+        b: { c: { card: "deep" } },
+      })
+    })
+
+    it("supports bracket keys and array indexes", () => {
+      const out = browserRedact(
+        {
+          headers: { "x-api-key": "k", accept: "json" },
+          items: [{ pan: "1" }, { pan: "2" }],
+          rows: [{ pan: "3" }, { pan: "4" }],
+        },
+        ['headers["x-api-key"]', "items[*].pan", "rows[1].pan"],
+      )
+      expect(out).toEqual({
+        headers: { "x-api-key": "[REDACTED]", accept: "json" },
+        items: [{ pan: "[REDACTED]" }, { pan: "[REDACTED]" }],
+        rows: [{ pan: "3" }, { pan: "[REDACTED]" }],
+      })
+    })
+
+    it("redacts a whole subtree named by a path", () => {
+      expect(browserRedact({ req: { body: { a: 1 } } }, ["req.body"])).toEqual({
+        req: { body: "[REDACTED]" },
+      })
+    })
+  })
 })

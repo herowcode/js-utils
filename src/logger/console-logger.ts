@@ -49,16 +49,9 @@ function serializeError(err: unknown): unknown {
   return err
 }
 
-function normalizeContext(
-  ctx: TLogContext | undefined,
-  redact: readonly string[] | undefined,
-): TLogContext | undefined {
-  if (!ctx) return undefined
-  const next: TLogContext = {}
-  for (const [k, v] of Object.entries(ctx)) {
-    next[k] = k === "err" ? serializeError(v) : v
-  }
-  return browserRedact(next, redact)
+function serializeErr(ctx: TLogContext | undefined): TLogContext {
+  if (!ctx || !("err" in ctx)) return ctx ?? {}
+  return { ...ctx, err: serializeError(ctx.err) }
 }
 
 interface IBrowserLoggerState {
@@ -76,10 +69,11 @@ function emit(
 ): void {
   if (LEVEL_ORDER[level] < LEVEL_ORDER[state.level]) return
 
-  const merged = {
-    ...state.bindings,
-    ...(normalizeContext(ctx, state.redact) ?? {}),
-  }
+  // Redact bindings and context together so paths resolve from the log root, as in pino
+  const merged = browserRedact(
+    { ...state.bindings, ...serializeErr(ctx) },
+    state.redact,
+  )
 
   if (isProduction()) {
     const payload = {

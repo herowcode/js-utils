@@ -90,17 +90,20 @@ describe("apiClient retry backoff", () => {
   it.each([
     [0, 100],
     [0.5, 150],
-  ])("jitters the exponential backoff (random=%f -> %ims)", async (random, delay) => {
-    vi.mocked(Math.random).mockReturnValue(random)
-    mockFetch
-      .mockResolvedValueOnce(response(503))
-      .mockResolvedValueOnce(response(200))
+  ])(
+    "jitters the exponential backoff (random=%f -> %ims)",
+    async (random, delay) => {
+      vi.mocked(Math.random).mockReturnValue(random)
+      mockFetch
+        .mockResolvedValueOnce(response(503))
+        .mockResolvedValueOnce(response(200))
 
-    const promise = client.get("/x")
-    await vi.advanceTimersByTimeAsync(delay - 1)
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    await vi.advanceTimersByTimeAsync(1)
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-    await promise
-  })
+      const promise = client.get("/x")
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      await promise
+    },
+  )
 })

@@ -138,8 +138,7 @@ async function fetchWithRetry(
   )
   const statusCodes = retry?.statusCodes ?? defaultRetryConfig.statusCodes
   const backoffLimit = retry?.backoffLimit ?? defaultRetryConfig.backoffLimit
-  const maxRetryAfter =
-    retry?.maxRetryAfter ?? defaultRetryConfig.maxRetryAfter
+  const maxRetryAfter = retry?.maxRetryAfter ?? defaultRetryConfig.maxRetryAfter
   const retryable = methods.includes(request.method.toLowerCase())
   let attempt = 0
 
