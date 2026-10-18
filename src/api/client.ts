@@ -188,6 +188,8 @@ export type TApiClientProps = {
   getUserIP?: () => Promise<string | undefined>
   /** Default `timeout` in ms for every request; a per-request `timeout` wins. */
   timeout?: number
+  /** Default `redirect` mode for every request; a per-request `redirect` wins. */
+  redirect?: RequestRedirect
 }
 
 async function api<T>(
@@ -214,6 +216,7 @@ async function api<T>(
   // Apply default options
   const init: ICustomRequestInit = {
     credentials: "include",
+    ...(config.redirect && { redirect: config.redirect }),
     ...options,
   }
 
