@@ -270,6 +270,50 @@ describe("getYoutubeVideoInfo", () => {
     expect(fetchMock.mock.calls.length).toBe(callsAfterFirst)
   })
 
+  it("passes an abort signal to every fetch", async () => {
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(samplePlayerResponse),
+      watch: () =>
+        htmlResponse(buildHtmlFromPlayerResponse(samplePlayerResponse)),
+      oembed: () => jsonResponse({ title: "t", author_name: "a" }),
+      noembed: () => jsonResponse({ title: "t", author_name: "a" }),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getYoutubeVideoInfo } = await importModule()
+    await getYoutubeVideoInfo(validUrl)
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(4)
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+    }
+  })
+
+  it("returns a copy so callers cannot mutate the cached value", async () => {
+    const fetchMock = makeFetchMock({
+      innertube: () => jsonResponse(structuredClone(samplePlayerResponse)),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getYoutubeVideoInfo } = await importModule()
+    const first = await getYoutubeVideoInfo(validUrl)
+    const expectedTitle = first?.title
+    const expectedThumbs = first?.thumbnails.length
+    const expectedKeywords = first?.keywords?.length
+    if (!first) throw new Error("expected info")
+    first.title = "mutated"
+    first.thumbnails.push({ url: "https://evil.example/x.jpg" })
+    first.thumbnails[0].url = "https://evil.example/y.jpg"
+    first.keywords?.push("mutated")
+
+    const second = await getYoutubeVideoInfo(validUrl)
+
+    expect(second?.title).toBe(expectedTitle)
+    expect(second?.thumbnails.length).toBe(expectedThumbs)
+    expect(second?.thumbnails[0].url).not.toContain("evil.example")
+    expect(second?.keywords?.length).toBe(expectedKeywords)
+  })
+
   it("clears cache entries when fetching fails", async () => {
     let shouldSucceed = false
     const fetchMock = makeFetchMock({

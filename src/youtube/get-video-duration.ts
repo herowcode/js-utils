@@ -3,35 +3,60 @@ import { formatSecondsToHMS } from "../string"
 import { extractYouTubeId } from "./extract-youtube-video-id"
 import { validateYoutubeLink } from "./validate-youtube-link"
 
+const API_SRC = "https://www.youtube.com/iframe_api"
+const API_LOAD_TIMEOUT_MS = 10000
+
 let YtApiLoading: Promise<void> | null = null
 
 function loadYouTubeIFrameAPI(): Promise<void> {
   if ((window as any).YT?.Player) return Promise.resolve()
   if (YtApiLoading) return YtApiLoading
 
-  YtApiLoading = new Promise((resolve) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[src="https://www.youtube.com/iframe_api"]',
+  YtApiLoading = new Promise<void>((resolve, reject) => {
+    const previousReady = (window as any).onYouTubeIframeAPIReady
+    let poll: ReturnType<typeof setInterval> | undefined
+    const existing = document.querySelector(`script[src="${API_SRC}"]`)
+    const tag = existing ? undefined : document.createElement("script")
+
+    const timer = setTimeout(
+      () => fail(new Error("YouTube IFrame API load timed out")),
+      API_LOAD_TIMEOUT_MS,
     )
-    if (existing) {
-      // Poll until the API is ready
-      const poll = setInterval(() => {
+
+    function settle() {
+      clearTimeout(timer)
+      if (poll) clearInterval(poll)
+    }
+
+    function fail(error: Error) {
+      settle()
+      // Drop our own tag so the next attempt injects a fresh one instead of waiting on a dead script
+      tag?.remove()
+      ;(window as any).onYouTubeIframeAPIReady = previousReady
+      YtApiLoading = null
+      reject(error)
+    }
+
+    if (!tag) {
+      poll = setInterval(() => {
         if ((window as any).YT?.Player) {
-          clearInterval(poll)
+          settle()
           resolve()
         }
       }, 50)
       return
     }
 
-    const tag = document.createElement("script")
-    tag.src = "https://www.youtube.com/iframe_api"
+    tag.src = API_SRC
     tag.async = true
-    document.body.appendChild(tag)
+    tag.onerror = () => fail(new Error("Failed to load the YouTube IFrame API"))
 
     ;(window as any).onYouTubeIframeAPIReady = () => {
+      previousReady?.()
+      settle()
       resolve()
     }
+    document.body.appendChild(tag)
   })
 
   return YtApiLoading
@@ -76,6 +101,7 @@ export async function getYoutubeVideoDuration(
     let resolved = false
     let player: any = null
     let cleanupTimeout: number | null = null
+    let retryInterval: ReturnType<typeof setInterval> | undefined
 
     function cleanupAndResolve(result: string | null) {
       if (resolved) return
@@ -91,6 +117,7 @@ export async function getYoutubeVideoDuration(
         /* ignore */
       }
       if (cleanupTimeout) window.clearTimeout(cleanupTimeout)
+      if (retryInterval) clearInterval(retryInterval)
       resolve(result)
     }
 
@@ -111,20 +138,20 @@ export async function getYoutubeVideoDuration(
               if (!duration || duration === 0) {
                 // Sometimes duration is 0 immediately; try a few short retries
                 let attempts = 0
-                const tryInterval = setInterval(() => {
+                retryInterval = setInterval(() => {
                   attempts += 1
                   try {
                     duration = e.target.getDuration()
                     if (duration && duration > 0) {
-                      clearInterval(tryInterval)
+                      clearInterval(retryInterval)
                       cleanupAndResolve(formatSecondsToHMS(duration))
                     } else if (attempts >= 8) {
-                      clearInterval(tryInterval)
+                      clearInterval(retryInterval)
                       cleanupAndResolve(null)
                     }
                   } catch {
                     if (attempts >= 8) {
-                      clearInterval(tryInterval)
+                      clearInterval(retryInterval)
                       cleanupAndResolve(null)
                     }
                   }

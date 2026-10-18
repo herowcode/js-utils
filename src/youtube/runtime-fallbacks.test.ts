@@ -3,15 +3,19 @@ import { getYoutubeVideoDuration } from "./get-video-duration-node-fallback"
 import { getYoutubeThumbnail } from "./get-youtube-thumbnail-node-fallback"
 
 describe("youtube runtime fallbacks", () => {
-  it("returns null for getYoutubeThumbnail in node-safe fallback", async () => {
+  it("rejects getYoutubeThumbnail in the node entry", async () => {
     await expect(
       getYoutubeThumbnail("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
-    ).resolves.toBeNull()
+    ).rejects.toThrow(
+      "@herowcode/utils/youtube: getYoutubeThumbnail is not supported in Node.js",
+    )
   })
 
-  it("returns null for getYoutubeVideoDuration in node-safe fallback", async () => {
+  it("rejects getYoutubeVideoDuration in the node entry", async () => {
     await expect(
       getYoutubeVideoDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
-    ).resolves.toBeNull()
+    ).rejects.toThrow(
+      "@herowcode/utils/youtube: getYoutubeVideoDuration is not supported in Node.js",
+    )
   })
 })

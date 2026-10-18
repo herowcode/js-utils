@@ -85,7 +85,10 @@ describe("getYoutubeVideoDuration", () => {
 
     // Mock YT API
     mockYTAPI = {
-      Player: vi.fn().mockImplementation((_elementId: string, config: any) => {
+      Player: vi.fn().mockImplementation(function (
+        _elementId: string,
+        config: any,
+      ) {
         // Simulate async ready event
         setTimeout(() => {
           if (config.events?.onReady) {
@@ -135,6 +138,7 @@ describe("getYoutubeVideoDuration", () => {
 
     // reset validateYoutubeLink mock
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   it("should return a function when called", () => {
@@ -216,16 +220,17 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should handle player errors gracefully", async () => {
     // Mock player to trigger error
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        setTimeout(() => {
-          if (config.events?.onError) {
-            config.events.onError()
-          }
-        }, 50)
-        return mockYTPlayer
-      })
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      setTimeout(() => {
+        if (config.events?.onError) {
+          config.events.onError()
+        }
+      }, 50)
+      return mockYTPlayer
+    })
 
     const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -252,7 +257,7 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should timeout after 10 seconds", async () => {
     // Mock player that never calls onReady (simulates network/API issues)
-    mockYTAPI.Player = vi.fn().mockImplementation(() => {
+    mockYTAPI.Player = vi.fn().mockImplementation(function () {
       // Return player but never trigger onReady
       return {
         getDuration: vi.fn(() => 195),
@@ -270,7 +275,7 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should handle player construction errors", async () => {
     // Mock YT.Player constructor to throw
-    mockYTAPI.Player = vi.fn().mockImplementation(() => {
+    mockYTAPI.Player = vi.fn().mockImplementation(function () {
       throw new Error("Player construction failed")
     })
 
@@ -296,16 +301,17 @@ describe("getYoutubeVideoDuration", () => {
       destroy: vi.fn(),
     }
 
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        setTimeout(() => {
-          if (config.events?.onReady) {
-            config.events.onReady({ target: mockPlayerWithErrors })
-          }
-        }, 50)
-        return mockPlayerWithErrors
-      })
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      setTimeout(() => {
+        if (config.events?.onReady) {
+          config.events.onReady({ target: mockPlayerWithErrors })
+        }
+      }, 50)
+      return mockPlayerWithErrors
+    })
 
     const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -341,16 +347,17 @@ describe("getYoutubeVideoDuration", () => {
       destroy: "not-a-function", // Invalid destroy method
     }
 
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        setTimeout(() => {
-          if (config.events?.onReady) {
-            config.events.onReady({ target: mockPlayerWithBadDestroy })
-          }
-        }, 50)
-        return mockPlayerWithBadDestroy
-      })
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      setTimeout(() => {
+        if (config.events?.onReady) {
+          config.events.onReady({ target: mockPlayerWithBadDestroy })
+        }
+      }, 50)
+      return mockPlayerWithBadDestroy
+    })
 
     // Should not throw error during cleanup and should still return duration
     const duration = await getYoutubeVideoDuration(
@@ -362,33 +369,34 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should generate unique iframe IDs for concurrent calls", async () => {
     let createdPlayerCount = 0
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        const playerIndex = createdPlayerCount++
-        const player = {
-          getDuration: vi.fn(() => 195),
-          destroy: vi.fn(),
-        }
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      const playerIndex = createdPlayerCount++
+      const player = {
+        getDuration: vi.fn(() => 195),
+        destroy: vi.fn(),
+      }
 
-        // Stagger the onReady calls slightly to simulate real-world timing
-        setTimeout(
-          () => {
-            if (config.events?.onReady) {
-              config.events.onReady({ target: player })
-            }
-          },
-          50 + playerIndex * 25,
-        )
+      // Stagger the onReady calls slightly to simulate real-world timing
+      setTimeout(
+        () => {
+          if (config.events?.onReady) {
+            config.events.onReady({ target: player })
+          }
+        },
+        50 + playerIndex * 25,
+      )
 
-        return player
-      })
+      return player
+    })
 
     // Make multiple concurrent calls
     const promises = [
       getYoutubeVideoDuration("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
-      getYoutubeVideoDuration("https://www.youtube.com/watch?v=test1"),
-      getYoutubeVideoDuration("https://www.youtube.com/watch?v=test2"),
+      getYoutubeVideoDuration("https://www.youtube.com/watch?v=test1000000"),
+      getYoutubeVideoDuration("https://www.youtube.com/watch?v=test2000000"),
     ]
 
     // Check that multiple iframes are created with unique IDs
@@ -416,5 +424,107 @@ describe("getYoutubeVideoDuration", () => {
   it("should return a stable function across calls", () => {
     expect(typeof getYoutubeVideoDuration).toBe("function")
     expect(typeof getYoutubeVideoDuration).toBe("function")
+  })
+
+  describe("iframe API loading failures", () => {
+    const url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    const apiScript = () =>
+      document.querySelector<HTMLScriptElement>(
+        'script[src="https://www.youtube.com/iframe_api"]',
+      )
+
+    async function freshModule() {
+      vi.resetModules()
+      const mod = await import("./get-video-duration")
+      return mod.getYoutubeVideoDuration
+    }
+
+    beforeEach(() => {
+      delete (window as any).YT
+    })
+
+    it("returns null when the api script fails to load, then recovers on retry", async () => {
+      const getDuration = await freshModule()
+
+      const failed = getDuration(url)
+      await vi.waitFor(() => expect(apiScript()).not.toBeNull())
+      apiScript()?.dispatchEvent(new Event("error"))
+
+      expect(await failed).toBeNull()
+      expect(apiScript()).toBeNull()
+
+      const retry = getDuration(url)
+      await vi.waitFor(() => expect(apiScript()).not.toBeNull())
+      ;(window as any).YT = mockYTAPI
+      ;(window as any).onYouTubeIframeAPIReady()
+
+      expect(await retry).toBe("03:15")
+    })
+
+    it("times out after 10s when the api never becomes ready", async () => {
+      vi.useFakeTimers()
+      const getDuration = await freshModule()
+
+      const result = getDuration(url)
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(await result).toBeNull()
+      expect(apiScript()).toBeNull()
+    })
+
+    it("stops polling when an existing script never becomes ready", async () => {
+      vi.useFakeTimers()
+      const existing = document.createElement("script")
+      existing.src = "https://www.youtube.com/iframe_api"
+      document.body.appendChild(existing)
+      const getDuration = await freshModule()
+
+      const result = getDuration(url)
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(await result).toBeNull()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it("chains a pre-existing onYouTubeIframeAPIReady handler", async () => {
+      const previous = vi.fn()
+      ;(window as any).onYouTubeIframeAPIReady = previous
+      const getDuration = await freshModule()
+
+      const result = getDuration(url)
+      await vi.waitFor(() => expect(apiScript()).not.toBeNull())
+      ;(window as any).YT = mockYTAPI
+      ;(window as any).onYouTubeIframeAPIReady()
+
+      expect(await result).toBe("03:15")
+      expect(previous).toHaveBeenCalledOnce()
+    })
+  })
+
+  it("stops retrying getDuration once the player has errored", async () => {
+    vi.useFakeTimers()
+    const getDuration = vi.fn(() => 0)
+    let config: any
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _id: string,
+      cfg: any,
+    ) {
+      config = cfg
+      return { getDuration, destroy: vi.fn() }
+    })
+
+    const result = getYoutubeVideoDuration(
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    config.events.onReady({ target: { getDuration } })
+    await vi.advanceTimersByTimeAsync(300)
+    config.events.onError()
+    expect(await result).toBeNull()
+    const callsAtError = getDuration.mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(getDuration.mock.calls.length).toBe(callsAtError)
   })
 })

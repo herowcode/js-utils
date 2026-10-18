@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { generateYoutubeURL } from "./generate-youtube-url"
+import type { TCreateYoutubeLinkOptions } from "./index"
 
 describe("generateYoutubeURL", () => {
-  const watchUrl = "https://www.youtube.com/watch?v=abc123"
-  const shortUrl = "https://youtu.be/abc123"
+  const watchUrl = "https://www.youtube.com/watch?v=abc12345678"
+  const shortUrl = "https://youtu.be/abc12345678"
 
   it("returns null for non-youtube URL", () => {
     const res = generateYoutubeURL({ videoURL: "https://example.com" })
@@ -16,7 +17,7 @@ describe("generateYoutubeURL", () => {
     const url = new URL(res as string)
     expect(url.hostname).toBe("www.youtube.com")
     expect(url.pathname).toBe("/watch")
-    expect(url.searchParams.get("v")).toBe("abc123")
+    expect(url.searchParams.get("v")).toBe("abc12345678")
     expect(url.hash).toBe("")
   })
 
@@ -26,7 +27,7 @@ describe("generateYoutubeURL", () => {
     const url = new URL(res as string)
     expect(url.hostname).toBe("www.youtube.com")
     expect(url.pathname).toBe("/watch")
-    expect(url.searchParams.get("v")).toBe("abc123")
+    expect(url.searchParams.get("v")).toBe("abc12345678")
     expect(url.hash).toBe("")
   })
 
@@ -39,7 +40,7 @@ describe("generateYoutubeURL", () => {
     expect(res).not.toBeNull()
     const url = new URL(res as string)
     expect(url.hostname).toBe("youtu.be")
-    expect(url.pathname).toBe("/abc123")
+    expect(url.pathname).toBe("/abc12345678")
     expect(url.searchParams.get("t")).toBe("90")
     expect(url.hash).toBe("")
   })
@@ -54,7 +55,7 @@ describe("generateYoutubeURL", () => {
     expect(url.hostname).toBe("www.youtube.com")
     expect(url.pathname).toBe("/watch")
     expect(url.searchParams.get("start")).toBe("90")
-    expect(url.searchParams.get("v")).toBe("abc123")
+    expect(url.searchParams.get("v")).toBe("abc12345678")
     expect(url.hash).toBe("")
   })
 
@@ -81,7 +82,7 @@ describe("generateYoutubeURL", () => {
     expect(res).not.toBeNull()
     const url = new URL(res as string)
     expect(url.hostname).toBe("www.youtube.com")
-    expect(url.pathname).toBe("/embed/abc123")
+    expect(url.pathname).toBe("/embed/abc12345678")
     expect(url.searchParams.get("v")).toBeNull() // embed URLs don't use v param
   })
 
@@ -94,9 +95,9 @@ describe("generateYoutubeURL", () => {
     expect(res).not.toBeNull()
     const url = new URL(res as string)
     expect(url.hostname).toBe("www.youtube.com")
-    expect(url.pathname).toBe("/embed/abc123")
+    expect(url.pathname).toBe("/embed/abc12345678")
     expect(url.searchParams.get("loop")).toBe("1")
-    expect(url.searchParams.get("playlist")).toBe("abc123")
+    expect(url.searchParams.get("playlist")).toBe("abc12345678")
   })
 
   it("explicit playlist is preserved when provided with loop", () => {
@@ -213,7 +214,7 @@ describe("generateYoutubeURL", () => {
     expect(res).not.toBeNull()
     const url = new URL(res as string)
     expect(url.hostname).toBe("youtu.be")
-    expect(url.pathname).toBe("/abc123")
+    expect(url.pathname).toBe("/abc12345678")
     expect(url.hash).toBe("#t=1m30s")
     expect(url.searchParams.get("t")).toBeNull() // no query param when using fragment
   })
@@ -251,5 +252,14 @@ describe("generateYoutubeURL", () => {
     // Invalid times should result in null from formatHMSToSeconds, so no params set
     expect(url.searchParams.get("start")).toBeNull()
     expect(url.searchParams.get("end")).toBeNull()
+  })
+})
+
+describe("generateYoutubeURL options type", () => {
+  it("exports TCreateYoutubeLinkOptions from the module index", () => {
+    const opts: TCreateYoutubeLinkOptions = {
+      videoURL: "https://youtu.be/abc12345678",
+    }
+    expect(generateYoutubeURL(opts)).toContain("abc12345678")
   })
 })

@@ -73,6 +73,8 @@ export type TYouTubeVideoInfo = {
   isLive?: boolean
 }
 
+const FETCH_TIMEOUT_MS = 8000
+
 const videoInfoCache = new Map<string, Promise<TYouTubeVideoInfo | null>>()
 
 export async function getYoutubeVideoInfo(
@@ -82,18 +84,31 @@ export async function getYoutubeVideoInfo(
   const videoId = extractYouTubeId(videoUrl)
   if (!videoId) return null
 
-  const cached = videoInfoCache.get(videoId)
-  if (cached) return cached
-
-  const fetchPromise = fetchYoutubeVideoInfo(videoId)
-  videoInfoCache.set(videoId, fetchPromise)
-
-  const info = await fetchPromise
-  if (!info) {
-    videoInfoCache.delete(videoId)
+  let pending = videoInfoCache.get(videoId)
+  if (!pending) {
+    pending = fetchYoutubeVideoInfo(videoId).then(
+      (info) => {
+        if (!info) videoInfoCache.delete(videoId)
+        return info
+      },
+      (error) => {
+        videoInfoCache.delete(videoId)
+        throw error
+      },
+    )
+    videoInfoCache.set(videoId, pending)
   }
 
-  return info
+  const info = await pending
+  return info && cloneVideoInfo(info)
+}
+
+function cloneVideoInfo(info: TYouTubeVideoInfo): TYouTubeVideoInfo {
+  return {
+    ...info,
+    thumbnails: info.thumbnails.map((thumbnail) => ({ ...thumbnail })),
+    keywords: info.keywords && [...info.keywords],
+  }
 }
 
 async function fetchYoutubeVideoInfo(
@@ -256,6 +271,7 @@ async function fetchFromInnertube(
             Origin: "https://www.youtube.com",
           },
           body: JSON.stringify({ ...client.body, videoId }),
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         },
       )
       if (!response.ok) continue
@@ -311,7 +327,10 @@ async function fetchFromWatchPage(
   watchUrl: string,
 ): Promise<TYouTubeVideoInfo | null> {
   try {
-    const response = await fetch(watchUrl, { headers: WATCH_PAGE_HEADERS })
+    const response = await fetch(watchUrl, {
+      headers: WATCH_PAGE_HEADERS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
     if (!response.ok) {
       return null
     }
@@ -366,7 +385,9 @@ async function fetchFromOEmbed(
     const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(
       watchUrl,
     )}&format=json`
-    const response = await fetch(oEmbedUrl)
+    const response = await fetch(oEmbedUrl, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
     if (!response.ok) {
       return null
     }
@@ -412,7 +433,9 @@ async function fetchFromNoEmbed(
     const noEmbedUrl = `https://noembed.com/embed?url=${encodeURIComponent(
       watchUrl,
     )}`
-    const response = await fetch(noEmbedUrl)
+    const response = await fetch(noEmbedUrl, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
     if (!response.ok) {
       return null
     }
