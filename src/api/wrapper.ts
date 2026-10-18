@@ -1,5 +1,3 @@
-import type { AxiosError } from "axios"
-import { isAxiosError } from "axios"
 import type { TTryCatchResult } from "../function"
 
 // Define a richer error type to capture more information
@@ -12,21 +10,65 @@ export interface IApiError {
   timestamp?: string
 }
 
-/**
- * Extracts error properties from Axios errors
- */
-async function extractAxiosErrorDetails(error: AxiosError): Promise<IApiError> {
+const MAX_TEXT_LENGTH = 200
+
+interface IAxiosLikeError {
+  isAxiosError: true
+  message?: string
+  config?: { url?: string }
+  response?: { status?: number; data?: unknown }
+}
+
+function isAxiosLikeError(error: unknown): error is IAxiosLikeError {
+  return (
+    (error as { isAxiosError?: unknown } | null | undefined)?.isAxiosError ===
+    true
+  )
+}
+
+function truncate(text: string): string {
+  return text.length > MAX_TEXT_LENGTH
+    ? `${text.slice(0, MAX_TEXT_LENGTH)}...`
+    : text
+}
+
+function isPresent(value: unknown): boolean {
+  return value !== undefined && value !== null
+}
+
+function applyErrorData(
+  errorObj: IApiError,
+  data: Record<string, unknown>,
+): void {
+  const { message } = data
+  if (
+    (typeof message === "string" && message !== "") ||
+    typeof message === "number"
+  ) {
+    errorObj.message = String(message)
+  }
+
+  if (isPresent(data.code)) errorObj.code = String(data.code)
+
+  if ("details" in data) {
+    errorObj.details = data.details
+  } else if ("issues" in data) {
+    errorObj.details = data.issues
+  }
+
+  if (isPresent(data.timestamp)) errorObj.timestamp = String(data.timestamp)
+}
+
+function extractAxiosErrorDetails(error: IAxiosLikeError): IApiError {
   const errorObj: IApiError = {
     message: error.message || "Axios Error",
     status: error.response?.status,
     path: error.config?.url,
   }
 
-  if (error.response?.data && typeof error.response.data === "object") {
-    return await enrichErrorWithData(
-      errorObj,
-      Promise.resolve(error.response.data as Record<string, unknown>),
-    )
+  const data = error.response?.data
+  if (data && typeof data === "object") {
+    applyErrorData(errorObj, data as Record<string, unknown>)
   }
 
   return errorObj
@@ -51,8 +93,11 @@ function extractStandardErrorDetails(error: Error): IApiError {
 
   // Capture any custom properties the error might have
   const extendedError = error as ExtendedError
-  if (extendedError.code) errorObj.code = String(extendedError.code)
-  if (extendedError.status) errorObj.status = Number(extendedError.status)
+  if (isPresent(extendedError.code)) errorObj.code = String(extendedError.code)
+  if (isPresent(extendedError.status)) {
+    const status = Number(extendedError.status)
+    if (!Number.isNaN(status)) errorObj.status = status
+  }
   if (extendedError.details) errorObj.details = extendedError.details
 
   return errorObj
@@ -72,71 +117,25 @@ async function extractResponseErrorDetails(
 
   try {
     // Clone the response to avoid consuming the body stream
-    const clonedResponse = response.clone()
-    const errorData = await clonedResponse.json()
+    const errorData = await response.clone().json()
 
-    // Directly enrich the error object with the parsed data
     if (errorData && typeof errorData === "object") {
-      if ("message" in errorData && errorData.message) {
-        errorObj.message = String(errorData.message)
-      }
-
-      if ("code" in errorData) {
-        errorObj.code = String(errorData.code)
-      }
-
-      if ("details" in errorData) {
-        errorObj.details = errorData.details
-      } else if ("issues" in errorData) {
-        errorObj.details = errorData.issues
-      }
-
-      if ("timestamp" in errorData) {
-        errorObj.timestamp = String(errorData.timestamp)
-      }
+      applyErrorData(errorObj, errorData as Record<string, unknown>)
     }
-
     return errorObj
   } catch {
-    // If JSON parsing fails, return the basic error object
-    return errorObj
-  }
-}
-
-/**
- * Enriches an error object with additional data from response
- */
-async function enrichErrorWithData(
-  errorObj: IApiError,
-  errorData: Promise<Record<string, unknown>>,
-  path?: string,
-): Promise<IApiError> {
-  const data = await errorData
-
-  if (data) {
-    if ("message" in data) {
-      errorObj.message = String(data.message)
-    }
-
-    if ("code" in data) {
-      errorObj.code = String(data.code)
-    }
-
-    if ("details" in data) {
-      errorObj.details = data.details
-    } else if ("issues" in data) {
-      errorObj.details = data.issues
-    }
-
-    if ("timestamp" in data) {
-      errorObj.timestamp = String(data.timestamp)
-    }
-
-    if (path) {
-      errorObj.path = path
-    }
+    // Not JSON: fall back to a snippet of the raw text
   }
 
+  try {
+    const text = (await response.clone().text()).trim()
+    if (text) {
+      errorObj.message = truncate(text)
+      errorObj.details = truncate(text)
+    }
+  } catch {
+    // Body unreadable: keep the basic error object
+  }
   return errorObj
 }
 
@@ -148,7 +147,7 @@ async function processError(error: unknown): Promise<IApiError> {
     return extractResponseErrorDetails(error)
   }
 
-  if (isAxiosError(error)) {
+  if (isAxiosLikeError(error)) {
     return extractAxiosErrorDetails(error)
   }
 
@@ -157,8 +156,11 @@ async function processError(error: unknown): Promise<IApiError> {
   }
 
   // Handle unknown error types
-  return {
-    message: error ? JSON.stringify(error) : "Unknown error",
+  if (!error) return { message: "Unknown error" }
+  try {
+    return { message: JSON.stringify(error) ?? String(error) }
+  } catch {
+    return { message: String(error) }
   }
 }
 

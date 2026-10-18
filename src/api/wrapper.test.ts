@@ -1,12 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { apiWrapper } from "./wrapper"
-
-// Mock axios to test Axios error handling
-vi.mock("axios", () => ({
-  isAxiosError: vi.fn(),
-}))
-
-const { isAxiosError } = await import("axios")
 
 describe("apiWrapper", () => {
   describe("Success cases", () => {
@@ -36,11 +29,6 @@ describe("apiWrapper", () => {
   })
 
   describe("Error handling - Response objects", () => {
-    beforeEach(() => {
-      // Make sure isAxiosError returns false for Response objects
-      vi.mocked(isAxiosError).mockReturnValue(false)
-    })
-
     it("should handle Response error with JSON body", async () => {
       const responseData = {
         message: "Validation failed",
@@ -136,6 +124,7 @@ describe("apiWrapper", () => {
   describe("Error handling - Axios errors", () => {
     it("should handle Axios error with response data", async () => {
       const axiosError = {
+        isAxiosError: true,
         message: "Request failed",
         response: {
           status: 404,
@@ -148,8 +137,6 @@ describe("apiWrapper", () => {
           url: "/users/999",
         },
       }
-
-      vi.mocked(isAxiosError).mockReturnValue(true)
       const mockApiCall = vi.fn().mockRejectedValue(axiosError)
 
       const result = await apiWrapper(mockApiCall)
@@ -165,13 +152,12 @@ describe("apiWrapper", () => {
 
     it("should handle Axios error without response data", async () => {
       const axiosError = {
+        isAxiosError: true,
         message: "Network Error",
         config: {
           url: "/users",
         },
       }
-
-      vi.mocked(isAxiosError).mockReturnValue(true)
       const mockApiCall = vi.fn().mockRejectedValue(axiosError)
 
       const result = await apiWrapper(mockApiCall)
@@ -185,11 +171,6 @@ describe("apiWrapper", () => {
   })
 
   describe("Error handling - Standard Error objects", () => {
-    beforeEach(() => {
-      // Make sure isAxiosError returns false for standard errors
-      vi.mocked(isAxiosError).mockReturnValue(false)
-    })
-
     it("should handle standard Error", async () => {
       const error = new Error("Something went wrong")
       const mockApiCall = vi.fn().mockRejectedValue(error)
@@ -227,11 +208,6 @@ describe("apiWrapper", () => {
   })
 
   describe("Error handling - Unknown errors", () => {
-    beforeEach(() => {
-      // Make sure isAxiosError returns false for non-axios errors
-      vi.mocked(isAxiosError).mockReturnValue(false)
-    })
-
     it("should handle string error", async () => {
       const mockApiCall = vi.fn().mockRejectedValue("String error")
 
@@ -343,6 +319,69 @@ describe("apiWrapper", () => {
 
       expect(result.data).toBeNull()
       expect(result.error?.message).toBe("Async error")
+    })
+  })
+
+  describe("Robustness", () => {
+    function responseWith(
+      status: number,
+      body: string,
+      statusText = "Err",
+    ): Response {
+      return new Response(body, { status, statusText })
+    }
+
+    it("should use a truncated text body as message and details when body is not JSON", async () => {
+      const long = "x".repeat(1000)
+      const result = await apiWrapper(() =>
+        Promise.reject(responseWith(502, long)),
+      )
+
+      expect(result.error?.status).toBe(502)
+      expect(result.error?.message.length).toBeLessThanOrEqual(300)
+      expect(result.error?.message).toContain("xxx")
+      expect(typeof result.error?.details).toBe("string")
+      expect((result.error?.details as string).length).toBeLessThanOrEqual(300)
+    })
+
+    it("should keep the default message when the JSON body has a null message", async () => {
+      const result = await apiWrapper(() =>
+        Promise.reject(responseWith(400, '{"message":null,"code":null}')),
+      )
+
+      expect(result.error?.message).toBe("HTTP Error 400: Err")
+      expect(result.error?.code).toBeUndefined()
+    })
+
+    it("should keep a falsy-but-present code on standard errors", async () => {
+      const error = Object.assign(new Error("boom"), { code: 0, status: 0 })
+      const result = await apiWrapper(() => Promise.reject(error))
+
+      expect(result.error?.code).toBe("0")
+      expect(result.error?.status).toBe(0)
+    })
+
+    it("should drop a NaN status", async () => {
+      const error = Object.assign(new Error("boom"), { status: "abc" })
+      const result = await apiWrapper(() => Promise.reject(error))
+
+      expect(result.error?.status).toBeUndefined()
+    })
+
+    it("should not throw when the unknown error is not serializable", async () => {
+      const circular: Record<string, unknown> = {}
+      circular.self = circular
+      const result = await apiWrapper(() => Promise.reject(circular))
+
+      expect(result.error?.message).toBe("[object Object]")
+    })
+
+    it("should not use axios when axios-like error has isAxiosError false", async () => {
+      const result = await apiWrapper(() =>
+        Promise.reject({ isAxiosError: false, message: "x" }),
+      )
+
+      expect(result.error?.message).toBe('{"isAxiosError":false,"message":"x"}')
     })
   })
 })

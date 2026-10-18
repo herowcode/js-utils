@@ -430,7 +430,7 @@ describe("apiClient", () => {
       Object.setPrototypeOf(errorResponse, Response.prototype)
       mockFetch.mockResolvedValueOnce(errorResponse)
 
-      const result = await client.get("/error")
+      const result = await client.post("/error")
 
       expect(result.data).toBeNull()
       expect(result.error).toBeDefined()
@@ -543,6 +543,321 @@ describe("apiClient", () => {
 
       const request = getRequestFromFetchMock()
       expect(request.headers.get("Content-Type")).toBe("application/json")
+    })
+  })
+
+  describe("Retry hardening", () => {
+    function errorResponse(status: number): Response {
+      const res = createMockResponse(status, null, "Err")
+      Object.setPrototypeOf(res, Response.prototype)
+      return res
+    }
+
+    it("should send a fresh, unused Request on each attempt so POST bodies survive retries", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch
+        .mockResolvedValueOnce(errorResponse(503))
+        .mockResolvedValueOnce(createMockResponse(200, { ok: true }))
+
+      const promise = client.post("/items", {
+        json: { a: 1 },
+        retry: { methods: ["post"], statusCodes: [503] },
+      })
+      await vi.advanceTimersByTimeAsync(1000)
+      await promise
+
+      const first = mockFetch.mock.calls[0][0] as Request
+      const second = mockFetch.mock.calls[1][0] as Request
+      expect(second).not.toBe(first)
+      expect(second.bodyUsed).toBe(false)
+      expect(await second.text()).toBe('{"a":1}')
+    })
+
+    it("should compare retry methods case-insensitively", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch
+        .mockResolvedValueOnce(errorResponse(503))
+        .mockResolvedValueOnce(createMockResponse(200, { ok: true }))
+
+      const promise = client.get("/x", { retry: { methods: ["GET"] } })
+      await vi.advanceTimersByTimeAsync(1000)
+      await promise
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it.each([408, 429, 500, 502, 503, 504])(
+      "should retry GET on %i by default",
+      async (status) => {
+        const client = apiClient({ baseURL: "https://api.example.com" })
+        mockFetch
+          .mockResolvedValueOnce(errorResponse(status))
+          .mockResolvedValueOnce(createMockResponse(200, { ok: true }))
+
+        const promise = client.get("/x")
+        await vi.advanceTimersByTimeAsync(1000)
+        const result = await promise
+
+        expect(mockFetch).toHaveBeenCalledTimes(2)
+        expect(result.error).toBeNull()
+      },
+    )
+
+    it("should retry HEAD by default but not POST", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch
+        .mockResolvedValueOnce(errorResponse(503))
+        .mockResolvedValueOnce(createMockResponse(200, null))
+      const promise = client.get("/x", { method: "HEAD" })
+      await vi.advanceTimersByTimeAsync(1000)
+      await promise
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+
+      mockFetch.mockReset()
+      mockFetch.mockResolvedValueOnce(errorResponse(503))
+      const result = await client.post("/x", { json: {} })
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(result.error?.status).toBe(503)
+    })
+
+    it("should not retry 413 by default", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(errorResponse(413))
+
+      await client.get("/x")
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    })
+
+    it("should merge user retry options with defaults", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValue(errorResponse(503))
+
+      const promise = client.get("/x", { retry: { limit: 2 } })
+      await vi.advanceTimersByTimeAsync(10000)
+      await promise
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it("should cap an excessive retry limit", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValue(errorResponse(503))
+
+      const promise = client.get("/x", {
+        retry: { limit: 1000, backoffLimit: 1 },
+      })
+      await vi.advanceTimersByTimeAsync(60000)
+      await promise
+
+      expect(mockFetch.mock.calls.length).toBeLessThanOrEqual(10)
+    })
+
+    it("should cancel the failed response body before retrying", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      const cancel = vi.fn().mockResolvedValue(undefined)
+      const failed = errorResponse(503)
+      Object.defineProperty(failed, "body", { value: { cancel } })
+      mockFetch
+        .mockResolvedValueOnce(failed)
+        .mockResolvedValueOnce(createMockResponse(200, { ok: true }))
+
+      const promise = client.get("/x")
+      await vi.advanceTimersByTimeAsync(1000)
+      await promise
+
+      expect(cancel).toHaveBeenCalledOnce()
+    })
+
+    it("should retry network errors", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch
+        .mockRejectedValueOnce(new TypeError("fetch failed"))
+        .mockResolvedValueOnce(createMockResponse(200, { ok: true }))
+
+      const promise = client.get("/x")
+      await vi.advanceTimersByTimeAsync(1000)
+      const result = await promise
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(result.data).toEqual({ ok: true })
+    })
+
+    it("should surface the network error once attempts are exhausted", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockRejectedValue(new TypeError("fetch failed"))
+
+      const promise = client.get("/x", { retry: { limit: 2 } })
+      await vi.advanceTimersByTimeAsync(10000)
+      const result = await promise
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(result.error?.message).toBe("fetch failed")
+    })
+
+    it("should not retry network errors for non-retryable methods", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockRejectedValue(new TypeError("fetch failed"))
+
+      const result = await client.post("/x", { json: {} })
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(result.error?.message).toBe("fetch failed")
+    })
+
+    it("should not retry aborted requests", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockRejectedValue(
+        new DOMException("The operation was aborted", "AbortError"),
+      )
+
+      await client.get("/x")
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("URL and origin handling", () => {
+    it("should treat scheme-like prefixes case-insensitively as absolute", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("HTTPS://other.com/data")
+
+      expect(getRequestFromFetchMock().url).toBe("https://other.com/data")
+    })
+
+    it("should treat endpoints merely starting with 'http' as relative", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("httpbin/get")
+
+      expect(getRequestFromFetchMock().url).toBe(
+        "https://api.example.com/httpbin/get",
+      )
+    })
+
+    it("should fail with a clear error when baseURL is missing for a relative endpoint", async () => {
+      const client = apiClient()
+
+      const result = await client.get("/users")
+
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(result.error?.message).toMatch(/baseURL/)
+    })
+
+    it("should allow absolute endpoints without baseURL", async () => {
+      const client = apiClient()
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("https://other.com/data")
+
+      expect(getRequestFromFetchMock().url).toBe("https://other.com/data")
+    })
+
+    it("should not send Authorization or X-User-IP to a different origin", async () => {
+      const getAccessToken = vi.fn().mockResolvedValue("secret")
+      const getUserIP = vi.fn().mockResolvedValue("1.2.3.4")
+      const client = apiClient({
+        baseURL: "https://api.example.com",
+        getAccessToken,
+        getUserIP,
+      })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("https://evil.com/data")
+
+      const request = getRequestFromFetchMock()
+      expect(request.headers.get("Authorization")).toBeNull()
+      expect(request.headers.get("X-User-IP")).toBeNull()
+    })
+
+    it("should send Authorization to an absolute URL on the same origin", async () => {
+      const client = apiClient({
+        baseURL: "https://api.example.com/v1",
+        getAccessToken: vi.fn().mockResolvedValue("secret"),
+      })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("https://api.example.com/other")
+
+      expect(getRequestFromFetchMock().headers.get("Authorization")).toBe(
+        "Bearer secret",
+      )
+    })
+
+    it("should preserve Headers instances passed by the caller", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/x", {
+        json: { a: 1 },
+        headers: new Headers({ "X-Custom": "1" }),
+      })
+
+      const headers = getRequestFromFetchMock().headers
+      expect(headers.get("X-Custom")).toBe("1")
+      expect(headers.get("Content-Type")).toBe("application/json")
+    })
+
+    it("should preserve tuple-array headers passed by the caller", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.post("/x", { json: {}, headers: [["X-Custom", "2"]] })
+
+      expect(getRequestFromFetchMock().headers.get("X-Custom")).toBe("2")
+    })
+  })
+
+  describe("Response parsing and 401 hardening", () => {
+    it("should report status, url and a body snippet when the JSON is invalid", async () => {
+      const client = apiClient({ baseURL: "https://api.example.com" })
+      const response = createMockResponse(200)
+      vi.mocked(response.text).mockResolvedValue(`<html>${"a".repeat(1000)}`)
+      Object.defineProperty(response, "url", {
+        value: "https://api.example.com/x",
+      })
+      mockFetch.mockResolvedValueOnce(response)
+
+      const result = await client.get("/x")
+
+      expect(result.error?.status).toBe(200)
+      expect(result.error?.message).toContain("https://api.example.com/x")
+      expect(result.error?.message).toContain("<html>")
+      expect(result.error?.message.length).toBeLessThan(500)
+    })
+
+    it("should still call onSignoutUnauthorized when only the query contains a sign-in word", async () => {
+      const onSignoutUnauthorized = vi.fn()
+      const client = apiClient({
+        baseURL: "https://api.example.com",
+        onSignoutUnauthorized,
+      })
+      const res = createMockResponse(401, { error: "no" }, "Unauthorized")
+      Object.setPrototypeOf(res, Response.prototype)
+      mockFetch.mockResolvedValueOnce(res)
+
+      await client.get("/me", { params: { next: "/login" } })
+
+      expect(onSignoutUnauthorized).toHaveBeenCalledOnce()
+    })
+
+    it("should keep the original 401 when onSignoutUnauthorized throws", async () => {
+      const client = apiClient({
+        baseURL: "https://api.example.com",
+        onSignoutUnauthorized: () => {
+          throw new Error("callback exploded")
+        },
+      })
+      const res = createMockResponse(401, { error: "no" }, "Unauthorized")
+      Object.setPrototypeOf(res, Response.prototype)
+      mockFetch.mockResolvedValueOnce(res)
+
+      const result = await client.get("/me")
+
+      expect(result.error?.status).toBe(401)
     })
   })
 })
