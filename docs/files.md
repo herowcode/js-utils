@@ -53,7 +53,7 @@ const success = await downloadUrl('https://example.com/report.pdf');
 // → true on success, false on failure
 ```
 
-Returns `false` (and logs the error) on a non-2xx response, a network error, or a URL without a filename. The filename is the percent-decoded last path segment. The temporary object URL and anchor are always cleaned up.
+Returns `false` (and logs the error) on a non-2xx response, a network error, or a URL whose last path segment has no file extension. The filename is the percent-decoded last path segment. The anchor is removed right away and the object URL is revoked about a second later, so the download isn't cancelled.
 
 ---
 

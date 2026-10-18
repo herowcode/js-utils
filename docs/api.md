@@ -66,7 +66,7 @@ Override per request with `retry: { limit, methods, statusCodes, backoffLimit }`
 
 ### Cross-origin requests
 
-`Authorization` and `X-User-IP` are attached only when the request origin equals the `baseURL` origin. Absolute URLs pointing to another origin are sent without them, so tokens are never leaked to third parties. A relative `baseURL` such as `"/api"` resolves against the page origin, and without `baseURL` the page origin is used; in Node, a missing or relative `baseURL` means no credentials are attached. `onSignoutUnauthorized` only fires for 401s from that same origin.
+`Authorization` and `X-User-IP` are attached only when the request origin equals the `baseURL` origin. Absolute URLs pointing to another origin are sent without them. Only these injected headers are origin-scoped: cookies still follow `credentials` (default `"include"`), and headers you pass yourself go wherever the request goes. A relative `baseURL` such as `"/api"` resolves against the page origin, and without `baseURL` the page origin is used; in Node, a missing or relative `baseURL` means no credentials are attached. `onSignoutUnauthorized` only fires for 401s from that same origin.
 
 ### Invalid JSON responses
 
