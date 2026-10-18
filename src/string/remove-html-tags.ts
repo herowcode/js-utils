@@ -57,5 +57,19 @@ export function removeHtmlTags(input: string): string {
     }
   }
 
-  return out + text.slice(last)
+  return dropReassembledTagStarts(out + text.slice(last))
+}
+
+// Stripping "<<b>x>" leaves "<x>": drop any surviving "<" that would open a tag, right to left
+function dropReassembledTagStarts(text: string): string {
+  const kept: string[] = []
+  let closeAhead = false
+  for (let i = text.length - 1; i >= 0; i--) {
+    const ch = text[i]
+    if (ch === ">") closeAhead = true
+    const next = kept.length > 0 ? kept[kept.length - 1] : ""
+    if (ch === "<" && closeAhead && TAG_START.test(next)) continue
+    kept.push(ch)
+  }
+  return kept.reverse().join("")
 }

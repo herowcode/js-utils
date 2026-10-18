@@ -139,4 +139,31 @@ describe("removeHtmlTags", () => {
       "a".repeat(100000),
     )
   })
+
+  it.each([
+    ["<<script>script>alert(1)</script>", "script>alert(1)"],
+    ["<<b>img src=x onerror=alert(1)>", "img src=x onerror=alert(1)>"],
+    ["<<<b>x>x>", "x>x>"],
+  ])("never reassembles a tag from nested '<' in %s", (input, expected) => {
+    expect(removeHtmlTags(input)).toBe(expected)
+  })
+
+  it.each([
+    "<<script>script>alert(1)</script>",
+    "<<b>img src=x onerror=alert(1)>",
+    "<<<b>x>x>",
+    "a < b and c > d",
+    "<p>Hello <b>world</b></p>",
+  ])("is idempotent for %s", (input) => {
+    const once = removeHtmlTags(input)
+    expect(removeHtmlTags(once)).toBe(once)
+  })
+
+  it("stays linear on deeply nested '<' input", () => {
+    const input = `${"<".repeat(20000)}${"b>".repeat(20000)}`
+    const start = performance.now()
+    const result = removeHtmlTags(input)
+    expect(performance.now() - start).toBeLessThan(200)
+    expect(result).not.toMatch(/<[A-Za-z/!?]/)
+  })
 })

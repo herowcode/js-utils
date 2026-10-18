@@ -107,7 +107,7 @@ truncate('Hello world', 2);          // → ".."  (never exceeds length)
 
 ### `removeHtmlTags(input)`
 
-Strips all HTML tags from a string in linear time. Only `<` followed by a letter, `/`, `!`, `?` or `>` starts a tag, so prose like `a < b and c > d` is left alone. Input longer than 100,000 characters is truncated to that length before stripping.
+Strips all HTML tags from a string in linear time. Only `<` followed by a letter, `/`, `!`, `?` or `>` starts a tag, so prose like `a < b and c > d` is left alone. Input longer than 100,000 characters is truncated to that length before stripping. A `<` left over from nested input (`<<b>x>`) is dropped so no tag is reassembled. It strips text; it is not an HTML sanitizer.
 
 ```typescript
 removeHtmlTags('<p>Hello <strong>world</strong></p>'); // → "Hello world"
