@@ -2,6 +2,7 @@ const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i
 const YOUTUBE_HOSTS = ["youtube.com", "youtube-nocookie.com"]
 const SHORT_HOST = "youtu.be"
+const VIDEO_PATH_PREFIXES = ["embed", "shorts", "live", "v", "e"]
 
 const isHost = (hostname: string, host: string) =>
   hostname === host || hostname.endsWith(`.${host}`)
@@ -27,7 +28,10 @@ export function extractYouTubeId(urlString: string | null): string | null {
   if (isHost(hostname, SHORT_HOST)) return validId(parts[0])
 
   if (YOUTUBE_HOSTS.some((host) => isHost(hostname, host))) {
-    return validId(url.searchParams.get("v")) ?? validId(parts.at(-1))
+    if (url.searchParams.has("v")) return validId(url.searchParams.get("v"))
+    return parts.length === 2 && VIDEO_PATH_PREFIXES.includes(parts[0])
+      ? validId(parts[1])
+      : null
   }
 
   return null

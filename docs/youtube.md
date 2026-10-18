@@ -17,7 +17,7 @@ import {
 
 ## `extractYouTubeId(urlString)`
 
-Extracts the video ID from any YouTube URL format. Only `youtube.com`, `youtube-nocookie.com`, `youtu.be` and their subdomains are accepted (`evilyoutube.com` and `youtube.com.evil.com` return `null`), and the ID must be 11 characters of `A-Z a-z 0-9 _ -`. Scheme-less input such as `youtu.be/dQw4w9WgXcQ` works.
+Extracts the video ID from any YouTube URL format. Only `youtube.com`, `youtube-nocookie.com`, `youtu.be` and their subdomains are accepted (`evilyoutube.com` and `youtube.com.evil.com` return `null`), and the ID must be 11 characters of `A-Z a-z 0-9 _ -`. Scheme-less input such as `youtu.be/dQw4w9WgXcQ` works. Path IDs are read only after `/embed/`, `/shorts/`, `/live/`, `/v/` and `/e/`, so `/channel/...` returns `null`.
 
 ```typescript
 extractYouTubeId('https://youtu.be/dQw4w9WgXcQ');                   // → "dQw4w9WgXcQ"

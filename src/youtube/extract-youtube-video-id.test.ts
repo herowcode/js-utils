@@ -57,10 +57,19 @@ describe("extractYouTubeId", () => {
     expect(extractYouTubeId("not a youtube url")).toBeNull()
   })
 
-  it("extracts id when youtube.com path's last segment is the id", () => {
+  it.each(["live", "v", "e"])("extracts id from /%s/<id> URLs", (prefix) => {
     expect(
-      extractYouTubeId("https://www.youtube.com/some/path/dQw4w9WgXcQ/"),
+      extractYouTubeId(`https://www.youtube.com/${prefix}/dQw4w9WgXcQ`),
     ).toBe("dQw4w9WgXcQ")
+  })
+
+  it.each([
+    "https://www.youtube.com/channel/UCabcdefghi",
+    "https://www.youtube.com/c/abcdefghijk",
+    "https://www.youtube.com/user/abcdefghijk",
+    "https://www.youtube.com/some/path/dQw4w9WgXcQ/",
+  ])("ignores 11-character segments outside video paths in %s", (url) => {
+    expect(extractYouTubeId(url)).toBeNull()
   })
 
   it.each([
