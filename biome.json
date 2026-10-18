@@ -108,17 +108,5 @@
         "organizeImports": "on"
       }
     }
-  },
-  "overrides": [
-    {
-      "includes": ["src/youtube/get-video-duration.test.ts"],
-      "linter": {
-        "rules": {
-          "complexity": {
-            "useArrowFunction": "off"
-          }
-        }
-      }
-    }
-  ]
+  }
 }

@@ -11,6 +11,8 @@ overrides:
   source-map-js@<1.2.2: ^1.2.2
   ws@<8.21.0: ^8.21.0
   fast-copy@<3.1.0: ^3.1.0
+  picomatch@>=2 <2.3.2: ^2.3.2
+  picomatch@>=4 <4.0.4: ^4.0.4
 
 importers:
 
@@ -1062,7 +1064,7 @@ packages:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
-      picomatch: ^3 || ^4
+      picomatch: ^4.0.4
     peerDependenciesMeta:
       picomatch:
         optional: true

@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: Mocked data can be any */
+/** biome-ignore-all lint/complexity/useArrowFunction: vitest 4 runs mocks invoked with `new` as constructors; arrows are not constructible */
 import {
   afterEach,
   beforeEach,
