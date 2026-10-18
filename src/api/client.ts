@@ -3,6 +3,8 @@ import { apiWrapper } from "./wrapper"
 export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
   json?: unknown
   params?: Record<string, string | number | boolean | null | undefined>
+  /** Total time in ms for the request, retries and backoff included. */
+  timeout?: number
   retry?: {
     limit?: number
     methods?: string[]
@@ -144,19 +146,39 @@ async function fetchWithRetry(
     } catch (error) {
       const aborted = (error as { name?: string } | null)?.name === "AbortError"
       if (!canRetry || aborted || request.signal.aborted) throw error
-      await sleep(Math.min(2 ** attempt * 100, backoffLimit))
+      await sleep(Math.min(2 ** attempt * 100, backoffLimit), request.signal)
       continue
     }
 
     if (!canRetry || !statusCodes.includes(response.status)) return response
 
     await discardBody(response)
-    await sleep(Math.min(2 ** attempt * 100, backoffLimit))
+    await sleep(Math.min(2 ** attempt * 100, backoffLimit), request.signal)
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason)
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal.reason)
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort)
+      resolve()
+    }, ms)
+    signal.addEventListener("abort", onAbort, { once: true })
+  })
+}
+
+function withTimeout(
+  signal: AbortSignal | null | undefined,
+  timeout: number | undefined,
+): AbortSignal | null | undefined {
+  if (timeout === undefined) return signal
+  const timeoutSignal = AbortSignal.timeout(timeout)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
 }
 
 export type TApiClientProps = {
@@ -164,6 +186,8 @@ export type TApiClientProps = {
   onSignoutUnauthorized?: (response?: unknown) => void
   getAccessToken?: () => Promise<string | null>
   getUserIP?: () => Promise<string | undefined>
+  /** Default `timeout` in ms for every request; a per-request `timeout` wins. */
+  timeout?: number
 }
 
 async function api<T>(
@@ -214,7 +238,8 @@ async function api<T>(
   }
 
   const target = resolveUrl(url)
-  let request = new Request(target?.href ?? url, { ...init, body })
+  const signal = withTimeout(init.signal, options.timeout ?? config.timeout)
+  let request = new Request(target?.href ?? url, { ...init, body, signal })
 
   const credentialOrigin = resolveUrl(config.baseURL ?? "")?.origin
   const sendCredentials =
