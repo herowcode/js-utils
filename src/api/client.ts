@@ -45,6 +45,18 @@ function buildQueryString(
   return queryString ? `?${queryString}` : ""
 }
 
+// Callbacks can't be cancelled, so stop waiting for them once the request aborts
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason)
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason)
+    signal.addEventListener("abort", onAbort, { once: true })
+    promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener("abort", onAbort)
+    })
+  })
+}
+
 async function beforeRequestHook(
   request: Request,
   sendCredentials: boolean,
@@ -53,14 +65,20 @@ async function beforeRequestHook(
 ): Promise<Request> {
   if (!sendCredentials) return request
 
-  const token = await getAccessToken?.()
+  const token = await untilAborted(
+    Promise.resolve(getAccessToken?.()),
+    request.signal,
+  )
   const headers = new Headers(request.headers)
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`)
   }
 
-  const userIP = await getUserIP?.()
+  const userIP = await untilAborted(
+    Promise.resolve(getUserIP?.()),
+    request.signal,
+  )
   if (userIP) {
     headers.set("X-User-IP", userIP)
   }
@@ -97,9 +115,12 @@ async function afterResponseHook(
   }
 
   try {
-    await onSignoutUnauthorized?.(body)
+    await untilAborted(
+      Promise.resolve(onSignoutUnauthorized?.(body)),
+      request.signal,
+    )
   } catch {
-    // A failing callback must not mask the original 401
+    // A failing or timed-out callback must not mask the original 401
   }
 }
 

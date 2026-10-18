@@ -2,7 +2,11 @@
 import { formatSecondsToHMS } from "../string"
 import { extractYouTubeId } from "./extract-youtube-video-id"
 import { validateYoutubeLink } from "./validate-youtube-link"
-import { type IYouTubeErrorOptions, reportYouTubeError } from "./youtube-error"
+import {
+  type IYouTubeErrorOptions,
+  reportInvalidUrl,
+  reportYouTubeError,
+} from "./youtube-error"
 
 const API_SRC = "https://www.youtube.com/iframe_api"
 const API_LOAD_TIMEOUT_MS = 10000
@@ -69,7 +73,10 @@ export async function getYoutubeVideoDuration(
   options?: IYouTubeErrorOptions,
 ): Promise<string | null> {
   const videoId = extractYouTubeId(videoUrl)
-  if (!videoId) return null
+  if (!videoId) {
+    reportInvalidUrl(options)
+    return null
+  }
 
   const videoIsValid = await validateYoutubeLink(videoUrl)
   if (!videoIsValid) {

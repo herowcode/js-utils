@@ -161,4 +161,57 @@ describe("apiClient timeout", () => {
     expect((mockFetch.mock.calls[1][0] as Request).signal.aborted).toBe(true)
     expect(result.error).not.toBeNull()
   })
+
+  it("reports a timeout as error.name TimeoutError and a caller abort as AbortError", async () => {
+    const client = apiClient({ baseURL: "https://api.example.com" })
+    mockFetch.mockImplementation(hangUntilAborted)
+
+    const timedOut = client.get("/x", { timeout: 1000 })
+    await vi.advanceTimersByTimeAsync(0)
+    timeoutController.abort(timeoutError())
+
+    const caller = new AbortController()
+    const aborted = client.get("/y", { signal: caller.signal })
+    await vi.advanceTimersByTimeAsync(0)
+    caller.abort()
+
+    expect((await timedOut).error?.name).toBe("TimeoutError")
+    expect((await aborted).error?.name).toBe("AbortError")
+  })
+
+  it.each(["getAccessToken", "getUserIP"] as const)(
+    "bounds a hanging %s by the timeout",
+    async (hook) => {
+      const client = apiClient({
+        baseURL: "https://api.example.com",
+        [hook]: () => new Promise(() => {}),
+      })
+
+      const promise = client.get("/x", { timeout: 1000 })
+      await vi.advanceTimersByTimeAsync(0)
+      timeoutController.abort(timeoutError())
+      const result = await promise
+
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(result.error?.name).toBe("TimeoutError")
+    },
+  )
+
+  it("stops waiting for a hanging onSignoutUnauthorized and still returns the 401", async () => {
+    const onSignoutUnauthorized = vi.fn(() => new Promise<void>(() => {}))
+    const client = apiClient({
+      baseURL: "https://api.example.com",
+      onSignoutUnauthorized,
+    })
+    mockFetch.mockResolvedValueOnce(jsonResponse(401, { message: "expired" }))
+
+    const promise = client.get("/x", { timeout: 1000 })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onSignoutUnauthorized).toHaveBeenCalledTimes(1)
+    timeoutController.abort(timeoutError())
+    const result = await promise
+
+    expect(result.error?.status).toBe(401)
+    expect(result.error?.message).toBe("expired")
+  })
 })

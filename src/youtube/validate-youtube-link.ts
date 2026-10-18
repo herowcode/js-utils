@@ -1,11 +1,24 @@
 import { extractYouTubeId } from "./extract-youtube-video-id"
 import { findYoutubeThumbnail } from "./find-youtube-thumbnail"
+import {
+  type IYouTubeErrorOptions,
+  reportInvalidUrl,
+  reportMissingThumbnail,
+  reportYouTubeError,
+} from "./youtube-error"
 
-export async function validateYoutubeLink(videoUrl: string): Promise<boolean> {
+export async function validateYoutubeLink(
+  videoUrl: string,
+  options?: IYouTubeErrorOptions,
+): Promise<boolean> {
   const videoId = extractYouTubeId(videoUrl)
-  if (!videoId) return false
+  if (!videoId) {
+    reportInvalidUrl(options)
+    return false
+  }
 
   if (await findYoutubeThumbnail(videoId)) return true
+  reportMissingThumbnail(options)
 
   // Fallback: oEmbed (may be subject to CORS in some environments)
   try {
@@ -18,8 +31,19 @@ export async function validateYoutubeLink(videoUrl: string): Promise<boolean> {
       signal: AbortSignal.timeout(8000),
     })
     // 401 means the video exists but embedding is disabled
-    return res.ok || res.status === 401
-  } catch {
+    if (res.ok || res.status === 401) return true
+    reportYouTubeError(options, {
+      source: "oembed",
+      message: `HTTP ${res.status}`,
+      status: res.status,
+    })
+    return false
+  } catch (error) {
+    reportYouTubeError(options, {
+      source: "oembed",
+      message: String((error as Error)?.message ?? error),
+      cause: error,
+    })
     return false
   }
 }

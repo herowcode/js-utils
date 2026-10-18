@@ -521,4 +521,70 @@ describe("getYoutubeVideoInfo onError", () => {
 
     expect(info).toBeNull()
   })
+
+  it("replays failures to every caller sharing the in-flight fetch", async () => {
+    let calls = 0
+    vi.stubGlobal(
+      "fetch",
+      makeFetchMock({
+        innertube: () => {
+          calls++
+          return jsonResponse(samplePlayerResponse)
+        },
+      }),
+    )
+    const first = vi.fn()
+    const second = vi.fn()
+    const later = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    await Promise.all([
+      getYoutubeVideoInfo(validUrl, { onError: first }),
+      getYoutubeVideoInfo(validUrl, { onError: second }),
+    ])
+    await getYoutubeVideoInfo(validUrl, { onError: later })
+
+    expect(calls).toBe(1)
+    const sources = (fn: typeof first) =>
+      fn.mock.calls.map(([error]) => error.source).sort()
+    expect(sources(first)).toEqual(["noembed", "oembed", "watch-page"])
+    expect(sources(second)).toEqual(sources(first))
+    // Settled cache hits don't repeat stale failures
+    expect(later).not.toHaveBeenCalled()
+  })
+
+  it("reports an invalid URL as a validation error", async () => {
+    vi.stubGlobal("fetch", makeFetchMock({}))
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo("https://example.com/x", { onError })
+
+    expect(info).toBeNull()
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ source: "validation" }),
+    )
+  })
+
+  it("keeps innertube's original network error as the cause", async () => {
+    const networkError = new TypeError("Failed to fetch")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input).includes("/youtubei/v1/player")) throw networkError
+        return jsonResponse(samplePlayerResponse)
+      }),
+    )
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    await getYoutubeVideoInfo(validUrl, { onError })
+
+    const innertube = onError.mock.calls.find(
+      ([error]) => error.source === "innertube",
+    )?.[0]
+    expect(innertube.message).toMatch(/ANDROID: Failed to fetch/)
+    expect((innertube.cause as Error).cause).toBe(networkError)
+  })
 })

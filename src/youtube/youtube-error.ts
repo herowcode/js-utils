@@ -3,6 +3,7 @@ export type TYouTubeErrorSource =
   | "watch-page"
   | "oembed"
   | "noembed"
+  | "thumbnail"
   | "validation"
   | "iframe-api"
   | "player"
@@ -18,6 +19,24 @@ export interface IYouTubeSourceError {
 export interface IYouTubeErrorOptions {
   /** Called once per failed source; errors thrown by it are ignored. */
   onError?: (error: IYouTubeSourceError) => void
+}
+
+export function reportInvalidUrl(
+  options: IYouTubeErrorOptions | undefined,
+): void {
+  reportYouTubeError(options, {
+    source: "validation",
+    message: "invalid YouTube URL",
+  })
+}
+
+export function reportMissingThumbnail(
+  options: IYouTubeErrorOptions | undefined,
+): void {
+  reportYouTubeError(options, {
+    source: "thumbnail",
+    message: "no thumbnail available",
+  })
 }
 
 export function reportYouTubeError(

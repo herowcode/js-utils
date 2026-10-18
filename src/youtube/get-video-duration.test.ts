@@ -160,6 +160,19 @@ describe("getYoutubeVideoDuration", () => {
     expect(duration).toBe(null)
   })
 
+  it("reports an invalid URL as a validation error", async () => {
+    const onError = vi.fn()
+
+    await getYoutubeVideoDuration("https://invalid-url.com", { onError })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "validation",
+        message: "invalid YouTube URL",
+      }),
+    )
+  })
+
   it("should return null when validateYoutubeLink returns false", async () => {
     // ensure validator returns false for this call
     ;(validateYoutubeLink as unknown as Mock).mockResolvedValueOnce(false)

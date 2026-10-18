@@ -1,5 +1,7 @@
 import {
   type IYouTubeErrorOptions,
+  type IYouTubeSourceError,
+  reportInvalidUrl,
   reportYouTubeError,
   type TYouTubeErrorSource,
 } from "./youtube-error"
@@ -81,15 +83,24 @@ export type TYouTubeVideoInfo = {
 
 const FETCH_TIMEOUT_MS = 8000
 
-function sourceFailure(message: string, status?: number): Error {
-  return Object.assign(new Error(message), { status })
+function sourceFailure(
+  message: string,
+  status?: number,
+  cause?: unknown,
+): Error {
+  return Object.assign(new Error(message, { cause }), { status })
 }
 
 const CACHE_TTL_MS = 60 * 60 * 1000
 const CACHE_MAX_ENTRIES = 100
 
+type TFetchResult = {
+  info: TYouTubeVideoInfo | null
+  errors: IYouTubeSourceError[]
+}
+
 type TCacheEntry = {
-  pending: Promise<TYouTubeVideoInfo | null>
+  pending: Promise<TFetchResult>
   expiresAt?: number
 }
 
@@ -102,7 +113,10 @@ export async function getYoutubeVideoInfo(
 ): Promise<TYouTubeVideoInfo | null> {
   const { extractYouTubeId } = await import("./extract-youtube-video-id")
   const videoId = extractYouTubeId(videoUrl)
-  if (!videoId) return null
+  if (!videoId) {
+    reportInvalidUrl(options)
+    return null
+  }
 
   let entry = videoInfoCache.get(videoId)
   if (entry?.expiresAt !== undefined && Date.now() >= entry.expiresAt) {
@@ -112,11 +126,11 @@ export async function getYoutubeVideoInfo(
 
   if (!entry) {
     const created: TCacheEntry = {
-      pending: fetchYoutubeVideoInfo(videoId, options).then(
-        (info) => {
-          if (info) created.expiresAt = Date.now() + CACHE_TTL_MS
+      pending: fetchYoutubeVideoInfo(videoId).then(
+        (result) => {
+          if (result.info) created.expiresAt = Date.now() + CACHE_TTL_MS
           else evict(videoId, created)
-          return info
+          return result
         },
         (error) => {
           evict(videoId, created)
@@ -133,7 +147,12 @@ export async function getYoutubeVideoInfo(
     videoInfoCache.delete(oldest)
   }
 
-  const info = await entry.pending
+  // Callers sharing an in-flight fetch all hear its failures; settled hits don't replay stale ones
+  const inFlight = entry.expiresAt === undefined
+  const { info, errors } = await entry.pending
+  if (inFlight) {
+    for (const error of errors) reportYouTubeError(options, error)
+  }
   return info && cloneVideoInfo(info)
 }
 
@@ -160,10 +179,7 @@ const SOURCES: readonly [
   ["noembed", fetchFromNoEmbed],
 ]
 
-async function fetchYoutubeVideoInfo(
-  videoId: string,
-  options?: IYouTubeErrorOptions,
-): Promise<TYouTubeVideoInfo | null> {
+async function fetchYoutubeVideoInfo(videoId: string): Promise<TFetchResult> {
   const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
 
   const results = await Promise.allSettled(
@@ -171,13 +187,14 @@ async function fetchYoutubeVideoInfo(
   )
 
   const sources: TYouTubeVideoInfo[] = []
+  const errors: IYouTubeSourceError[] = []
   results.forEach((result, i) => {
     if (result.status === "fulfilled") {
       sources.push(result.value)
       return
     }
     const reason = result.reason as { message?: unknown; status?: unknown }
-    reportYouTubeError(options, {
+    errors.push({
       source: SOURCES[i][0],
       message: String(reason?.message ?? reason),
       status: typeof reason?.status === "number" ? reason.status : undefined,
@@ -185,9 +202,10 @@ async function fetchYoutubeVideoInfo(
     })
   })
 
-  if (!sources.length) return null
-
-  return mergeVideoInfo(sources, videoId, watchUrl)
+  return {
+    info: sources.length ? mergeVideoInfo(sources, videoId, watchUrl) : null,
+    errors,
+  }
 }
 
 function mergeVideoInfo(
@@ -312,6 +330,7 @@ async function fetchFromInnertube(
 ): Promise<TYouTubeVideoInfo> {
   const failures: string[] = []
   let lastStatus: number | undefined
+  let lastError: unknown
   for (const client of INNERTUBE_CLIENTS) {
     try {
       const response = await fetch(
@@ -370,11 +389,12 @@ async function fetchFromInnertube(
           microformat?.liveBroadcastDetails?.isLiveNow,
       }
     } catch (error) {
+      lastError = error
       failures.push(`${client.name}: ${(error as Error)?.message ?? error}`)
     }
   }
 
-  throw sourceFailure(failures.join("; "), lastStatus)
+  throw sourceFailure(failures.join("; "), lastStatus, lastError)
 }
 
 const WATCH_PAGE_HEADERS: Record<string, string> = {
