@@ -26,8 +26,9 @@ describe("camelCase", () => {
   })
 
   it("should handle already camelCase strings", () => {
-    expect(camelCase("helloWorld")).toBe("helloworld")
-    expect(camelCase("fooBarBaz")).toBe("foobarbaz")
+    expect(camelCase("helloWorld")).toBe("helloWorld")
+    expect(camelCase("fooBarBaz")).toBe("fooBarBaz")
+    expect(camelCase("HelloWorld")).toBe("helloWorld")
   })
 
   it("should handle uppercase strings", () => {
@@ -77,5 +78,10 @@ describe("camelCase", () => {
     expect(() => camelCase([] as unknown as string)).toThrow(
       "Input must be a string",
     )
+  })
+
+  it("transliterates accented letters instead of deleting them", () => {
+    expect(camelCase("João Pessoa")).toBe("joaoPessoa")
+    expect(camelCase("ação-rápida")).toBe("acaoRapida")
   })
 })

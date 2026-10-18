@@ -33,6 +33,8 @@ describe("formatStringToTime", () => {
   })
 
   it("preserves leading zeros for HH:MM:SS cases", () => {
-    expect(formatStringToTime("000001")).toBe("00:01")
+    expect(formatStringToTime("000001")).toBe("00:00:01")
+    expect(formatStringToTime("000123")).toBe("00:01:23")
+    expect(formatStringToTime("00123")).toBe("00:01:23")
   })
 })

@@ -1,5 +1,7 @@
 export function formatSecondsToHMS(totalSeconds: number): string {
-  const rounded = Math.max(0, Math.round(totalSeconds))
+  const rounded = Number.isFinite(totalSeconds)
+    ? Math.max(0, Math.round(totalSeconds))
+    : 0
   const hours = Math.floor(rounded / 3600)
   const minutes = Math.floor((rounded % 3600) / 60)
   const seconds = rounded % 60

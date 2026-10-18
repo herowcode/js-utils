@@ -112,4 +112,31 @@ describe("removeHtmlTags", () => {
       "body { color: red; }Content",
     )
   })
+
+  it("keeps prose that uses < and > as comparison operators", () => {
+    expect(removeHtmlTags("a < b and c > d")).toBe("a < b and c > d")
+    expect(removeHtmlTags("1<2 and 3>2")).toBe("1<2 and 3>2")
+  })
+
+  it("keeps > inside quoted attribute values within a tag", () => {
+    expect(removeHtmlTags('<a title="a>b">x</a>')).toBe("x")
+  })
+
+  it("runs in linear time on pathological input", () => {
+    for (const input of [
+      "<".repeat(100000),
+      "<a".repeat(50000),
+      '<a "'.repeat(25000),
+    ]) {
+      const start = performance.now()
+      removeHtmlTags(input)
+      expect(performance.now() - start).toBeLessThan(200)
+    }
+  })
+
+  it("truncates input to 100000 characters before stripping", () => {
+    expect(removeHtmlTags(`${"a".repeat(100000)}<b>x</b>`)).toBe(
+      "a".repeat(100000),
+    )
+  })
 })

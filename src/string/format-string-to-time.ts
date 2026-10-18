@@ -1,5 +1,5 @@
 export const formatStringToTime = (str: string) => {
-  const stringCleaned = Number(str.replace(/\D/g, "")).toString()
+  const stringCleaned = str.replace(/\D/g, "")
   if (stringCleaned.length > 4) {
     return stringCleaned
       .padStart(6, "0")

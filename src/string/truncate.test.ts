@@ -26,8 +26,8 @@ describe("truncate", () => {
   })
 
   it("should handle zero length", () => {
-    expect(truncate("hello", 0)).toBe("...")
-    expect(truncate("world", 0, "***")).toBe("***")
+    expect(truncate("hello", 0)).toBe("")
+    expect(truncate("world", 0, "***")).toBe("")
   })
 
   it("should handle length equal to suffix length", () => {
@@ -36,8 +36,9 @@ describe("truncate", () => {
   })
 
   it("should handle length less than suffix length", () => {
-    expect(truncate("hello", 1)).toBe("...")
-    expect(truncate("world", 1, "***")).toBe("***")
+    expect(truncate("hello", 1)).toBe(".")
+    expect(truncate("world", 1, "***")).toBe("*")
+    expect(truncate("hello world", 2).length).toBeLessThanOrEqual(2)
   })
 
   it("should handle empty strings", () => {
@@ -47,7 +48,7 @@ describe("truncate", () => {
 
   it("should handle single character strings", () => {
     expect(truncate("a", 1)).toBe("a")
-    expect(truncate("a", 0)).toBe("...")
+    expect(truncate("a", 0)).toBe("")
   })
 
   it("should handle long suffix", () => {
@@ -68,6 +69,14 @@ describe("truncate", () => {
     expect(() => truncate([] as unknown as string, 5)).toThrow(
       "Input must be a string",
     )
+  })
+
+  it("should throw error for non-finite length", () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => truncate("hello", bad)).toThrow(
+        "Length must be a non-negative number",
+      )
+    }
   })
 
   it("should throw error for invalid length", () => {

@@ -31,4 +31,10 @@ describe("formatSecondsToHMS", () => {
     // 366100 seconds == 101:41:40
     expect(formatSecondsToHMS(366100)).toBe("101:41:40")
   })
+
+  it("treats non-finite input as zero", () => {
+    expect(formatSecondsToHMS(Number.NaN)).toBe("00:00")
+    expect(formatSecondsToHMS(Number.POSITIVE_INFINITY)).toBe("00:00")
+    expect(formatSecondsToHMS(Number.NEGATIVE_INFINITY)).toBe("00:00")
+  })
 })
