@@ -17,12 +17,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Releases
 
-Release only via `pnpm version:patch|minor|major`: it runs the full gate, then commits, tags and pushes. Any pushed `v*` tag publishes to npm through CI, so never create or push tags by hand.
+Every user-facing change needs a changeset (`pnpm changeset`); breaking changes get a migration note in it. Merging to `main` opens a "chore: version packages" PR via `.github/workflows/release.yml`, and merging that PR publishes to npm through OIDC trusted publishing. Never run `npm publish`, `changeset version` or create/push tags by hand.
 
 ## Health Stack
 
 - typecheck: pnpm tsc --noEmit
 - lint: pnpm biome check .
+- package: pnpm test:package
+- size: pnpm size
 - test: pnpm test:run
 - build: pnpm build
 - exports: pnpm test:exports
