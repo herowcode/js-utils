@@ -1,11 +1,10 @@
 import fs from "node:fs/promises"
-import { fileExists } from "./file-exists"
 
 export const fileDelete = async (filePath: string) => {
   try {
-    if (await fileExists(filePath)) await fs.rm(filePath)
+    await fs.rm(filePath, { force: true })
   } catch (err) {
-    // Log but don't throw during cleanup
-    console.error(`Error deleting file at ${filePath}:`, err)
+    // force only covers ENOENT on files; a missing parent can still surface it
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
   }
 }

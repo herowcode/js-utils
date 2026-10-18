@@ -1,4 +1,4 @@
-interface ICompressImageParams {
+export interface ICompressImageParams {
   file: File
   maxWidth?: number
   maxHeight?: number
@@ -16,13 +16,13 @@ function convertToWebp(filename: string): string {
   return `${filename.substring(0, lastDotIndex)}.webp`
 }
 
-export function compressImage({
+export async function compressImage({
   file,
   maxWidth = Number.POSITIVE_INFINITY,
   maxHeight = Number.POSITIVE_INFINITY,
   quality = 1,
   allowedFileTypes = ["image/jpg", "image/jpeg", "image/png", "image/webp"],
-}: ICompressImageParams) {
+}: ICompressImageParams): Promise<File> {
   if (!allowedFileTypes.includes(file.type)) {
     throw new Error("Image format not supported")
   }
@@ -30,59 +30,68 @@ export function compressImage({
   return new Promise<File>((resolve, reject) => {
     const reader = new FileReader()
 
+    reader.onerror = () => reject(new Error("Failed to read image file"))
+    reader.onabort = () => reject(new Error("Reading image file was aborted"))
+
     reader.onload = (event) => {
-      const compressed = new Image()
+      try {
+        const compressed = new Image()
 
-      compressed.onload = () => {
-        const canvas = document.createElement("canvas")
+        compressed.onerror = () => reject(new Error("Failed to load image"))
+        compressed.onabort = () =>
+          reject(new Error("Loading image was aborted"))
 
-        let width = compressed.width
-        let height = compressed.height
+        compressed.onload = () => {
+          try {
+            const canvas = document.createElement("canvas")
 
-        if (width > height) {
-          if (width > maxWidth) {
-            height *= maxWidth / width
-            width = maxWidth
-          }
-        } else {
-          if (height > maxHeight) {
-            width *= maxHeight / height
-            height = maxHeight
-          }
-        }
+            // Single scale factor keeps the aspect ratio within both bounds; never upscale
+            const scale = Math.min(
+              maxWidth / compressed.width,
+              maxHeight / compressed.height,
+              1,
+            )
+            const width = compressed.width * scale
+            const height = compressed.height * scale
 
-        canvas.width = width
-        canvas.height = height
+            canvas.width = width
+            canvas.height = height
 
-        const context = canvas.getContext("2d")
+            const context = canvas.getContext("2d")
 
-        if (!context) {
-          reject(new Error("Failed to get canvas context"))
-          return
-        }
-
-        context.drawImage(compressed, 0, 0, width, height)
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Failed to compress image."))
+            if (!context) {
+              reject(new Error("Failed to get canvas context"))
               return
             }
 
-            const compressedFile = new File([blob], convertToWebp(file.name), {
-              type: "image/webp",
-              lastModified: Date.now(),
-            })
+            context.drawImage(compressed, 0, 0, width, height)
 
-            resolve(compressedFile)
-          },
-          "image/webp",
-          quality,
-        )
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error("Failed to compress image."))
+                  return
+                }
+
+                resolve(
+                  new File([blob], convertToWebp(file.name), {
+                    type: "image/webp",
+                    lastModified: Date.now(),
+                  }),
+                )
+              },
+              "image/webp",
+              quality,
+            )
+          } catch (error) {
+            reject(error)
+          }
+        }
+
+        compressed.src = event.target?.result as string
+      } catch (error) {
+        reject(error)
       }
-
-      compressed.src = event.target?.result as string
     }
 
     reader.readAsDataURL(file)

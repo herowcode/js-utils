@@ -1,4 +1,4 @@
-export * from "./compress-image"
+export * from "./compress-image-node-fallback"
 export * from "./download-url-node-fallback"
 export * from "./file-delete"
 export * from "./file-exists"

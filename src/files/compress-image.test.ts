@@ -1,5 +1,14 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: Manipulation of global functions */
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 import { compressImage } from "./compress-image"
 
 describe("compressImage", () => {
@@ -84,9 +93,11 @@ describe("compressImage", () => {
     ;(global as any).Image = originalImage
   })
 
-  it("throws if file type is not allowed", () => {
+  it("rejects if file type is not allowed", async () => {
     const file = createMockFile("image/gif", "anim.gif")
-    expect(() => compressImage({ file })).toThrow("Image format not supported")
+    await expect(compressImage({ file })).rejects.toThrow(
+      "Image format not supported",
+    )
   })
 
   it("resolves if file type is allowed via allowedFileTypes", async () => {
@@ -212,5 +223,111 @@ describe("compressImage", () => {
 
     ;(global as any).Image = originalImage
     document.createElement = originalCreateElement
+  })
+})
+
+describe("compressImage failure and scaling", () => {
+  const file = new File(["x"], "pic.png", { type: "image/png" })
+  const realCreateElement = document.createElement
+  let canvas: { width: number; height: number }
+  let readerBehavior: "load" | "error" | "abort"
+  let imageBehavior: "load" | "error"
+  let imageSize: { width: number; height: number }
+  let getContext: () => unknown
+
+  beforeEach(() => {
+    canvas = { width: 0, height: 0 }
+    readerBehavior = "load"
+    imageBehavior = "load"
+    imageSize = { width: 100, height: 100 }
+    getContext = () => ({ drawImage: vi.fn() })
+
+    document.createElement = vi.fn().mockImplementation((tag: string) => {
+      if (tag !== "canvas") return realCreateElement.call(document, tag)
+      return Object.assign(canvas, {
+        getContext: () => getContext(),
+        toBlob: (cb: (blob: Blob | null) => void) => cb(new Blob(["c"])),
+      })
+    })
+
+    class FakeReader {
+      onload: ((e: any) => void) | null = null
+      onerror: (() => void) | null = null
+      onabort: (() => void) | null = null
+      readAsDataURL() {
+        setTimeout(() => {
+          if (readerBehavior === "load") {
+            this.onload?.({ target: { result: "data:image/png;base64,xx" } })
+          } else if (readerBehavior === "error") this.onerror?.()
+          else this.onabort?.()
+        }, 0)
+      }
+    }
+    class FakeImage {
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      get width() {
+        return imageSize.width
+      }
+      get height() {
+        return imageSize.height
+      }
+      set src(_v: string) {
+        setTimeout(() => {
+          if (imageBehavior === "load") this.onload?.()
+          else this.onerror?.()
+        }, 0)
+      }
+    }
+    vi.stubGlobal("FileReader", FakeReader)
+    vi.stubGlobal("Image", FakeImage)
+  })
+
+  afterEach(() => {
+    document.createElement = realCreateElement
+    vi.unstubAllGlobals()
+  })
+
+  it("rejects when the file reader errors", async () => {
+    readerBehavior = "error"
+    await expect(compressImage({ file })).rejects.toThrow()
+  })
+
+  it("rejects when the file reader aborts", async () => {
+    readerBehavior = "abort"
+    await expect(compressImage({ file })).rejects.toThrow()
+  })
+
+  it("rejects when the image fails to decode", async () => {
+    imageBehavior = "error"
+    await expect(compressImage({ file })).rejects.toThrow()
+  })
+
+  it("rejects instead of throwing when drawing fails", async () => {
+    getContext = () => {
+      throw new Error("canvas exploded")
+    }
+    await expect(compressImage({ file })).rejects.toThrow("canvas exploded")
+  })
+
+  it("scales so both maxWidth and maxHeight hold", async () => {
+    imageSize = { width: 2000, height: 1000 }
+    await compressImage({ file, maxWidth: 500, maxHeight: 200 })
+    expect(canvas.width).toBe(400)
+    expect(canvas.height).toBe(200)
+  })
+
+  it("scales a portrait image by maxWidth", async () => {
+    imageSize = { width: 600, height: 800 }
+    await compressImage({ file, maxWidth: 300 })
+    expect(canvas.width).toBe(300)
+    expect(canvas.height).toBe(400)
+  })
+
+  it("never upscales", async () => {
+    imageSize = { width: 100, height: 50 }
+    await compressImage({ file, maxWidth: 1000, maxHeight: 1000 })
+    expect(canvas.width).toBe(100)
+    expect(canvas.height).toBe(50)
   })
 })

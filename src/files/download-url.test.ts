@@ -7,10 +7,13 @@ describe("downloadUrl", () => {
   const originalAppendChild = document.body.appendChild
   const originalRemoveChild = document.body.removeChild
   const originalCreateObjectURL = window.URL.createObjectURL
+  const originalRevokeObjectURL = window.URL.revokeObjectURL
+  let link: { href: string; download: string; click: () => void }
 
   beforeEach(() => {
     // Mock fetch to return a blob
     global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       blob: vi
         .fn()
         .mockResolvedValue(new Blob(["test content"], { type: "text/plain" })),
@@ -20,11 +23,8 @@ describe("downloadUrl", () => {
     // Mock <a> element and its click
     document.createElement = vi.fn().mockImplementation((tag: string) => {
       if (tag === "a") {
-        return {
-          href: "",
-          download: "",
-          click: vi.fn(),
-        }
+        link = { href: "", download: "", click: vi.fn() }
+        return link
       }
       return originalCreateElement.call(document, tag)
     })
@@ -35,6 +35,7 @@ describe("downloadUrl", () => {
 
     // Mock createObjectURL
     window.URL.createObjectURL = vi.fn().mockReturnValue("blob:url")
+    window.URL.revokeObjectURL = vi.fn()
   })
 
   afterEach(() => {
@@ -43,6 +44,7 @@ describe("downloadUrl", () => {
     document.body.appendChild = originalAppendChild
     document.body.removeChild = originalRemoveChild
     window.URL.createObjectURL = originalCreateObjectURL
+    window.URL.revokeObjectURL = originalRevokeObjectURL
     vi.clearAllMocks()
   })
 
@@ -92,5 +94,56 @@ describe("downloadUrl", () => {
     )
 
     consoleErrorSpy.mockRestore()
+  })
+
+  it("revokes the object URL and removes the anchor after download", async () => {
+    await downloadUrl("https://example.com/files/test.txt")
+
+    expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:url")
+    expect(document.body.removeChild).toHaveBeenCalledWith(link)
+  })
+
+  it("returns false on a non-2xx response without creating a link", async () => {
+    const blob = vi.fn()
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404, blob })
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    const result = await downloadUrl("https://example.com/files/test.txt")
+
+    expect(result).toBe(false)
+    expect(blob).not.toHaveBeenCalled()
+    expect(window.URL.createObjectURL).not.toHaveBeenCalled()
+    consoleErrorSpy.mockRestore()
+  })
+
+  it("cleans up even when the click fails", async () => {
+    document.createElement = vi.fn().mockImplementation(() => {
+      link = {
+        href: "",
+        download: "",
+        click: vi.fn(() => {
+          throw new Error("click failed")
+        }),
+      }
+      return link
+    })
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    const result = await downloadUrl("https://example.com/files/test.txt")
+
+    expect(result).toBe(false)
+    expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:url")
+    expect(document.body.removeChild).toHaveBeenCalledWith(link)
+    consoleErrorSpy.mockRestore()
+  })
+
+  it("decodes percent-encoded filenames", async () => {
+    await downloadUrl("https://example.com/files/meu%20relat%C3%B3rio.pdf")
+
+    expect(link.download).toBe("meu relatório.pdf")
   })
 })
