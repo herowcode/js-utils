@@ -28,3 +28,18 @@ Every user-facing change needs a changeset (`pnpm changeset`); breaking changes 
 - test: pnpm test:run
 - build: pnpm build
 - exports: pnpm test:exports
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: npm (Changesets via GitHub Actions)
+- Production URL: https://www.npmjs.com/package/@herowcode/utils
+- Deploy workflow: .github/workflows/release.yml
+- Deploy status command: GH_CONFIG_DIR=$HOME/.config/gh-herowcode gh run list --repo herowcode/js-utils --workflow release.yml --branch main --limit 1 --json headSha,status,conclusion
+- Merge method: squash
+- Project type: library
+- Post-deploy health check: test "$(npm view @herowcode/utils version)" = "$(node -p 'require("./package.json").version')"
+
+### Custom deploy hooks
+- Pre-merge: pnpm check && pnpm test:run && pnpm build && pnpm test:exports && pnpm test:package && pnpm size
+- Deploy trigger: merging a feature PR to main only opens/updates the "chore: version packages" PR; merging that PR publishes to npm
+- Deploy status: GH_CONFIG_DIR=$HOME/.config/gh-herowcode gh run list --repo herowcode/js-utils --workflow release.yml --branch main --limit 1 --json headSha,status,conclusion
+- Health check: test "$(npm view @herowcode/utils version)" = "$(node -p 'require("./package.json").version')"
