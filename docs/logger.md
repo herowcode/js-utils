@@ -59,6 +59,12 @@ Every line in production includes:
 
 ## Node — `createLogger`
 
+The Node logger needs `pino`, which is an optional peer dependency. Install it before using the Node entrypoint; without it `createLogger` throws a clear error.
+
+```bash
+npm install pino
+```
+
 ```typescript
 import { createLogger } from '@herowcode/utils/logger'
 
@@ -76,7 +82,7 @@ reqLog.warn("rate_limit_close", { remaining: 3, limit: 100 })
 | Option | Default | Description |
 |--------|---------|-------------|
 | `service` | required | Identifies the app in JSON output |
-| `level` | `LOG_LEVEL` env, else `info` (prod) / `debug` (dev) | Min level emitted |
+| `level` | `LOG_LEVEL` env (ignored if not a Pino level), else `info` (prod) / `debug` (dev) | Min level emitted |
 | `redact` | extends defaults | Extra Pino redact paths |
 | `bindings` | `{}` | Static fields included in every log |
 
@@ -163,7 +169,11 @@ log.info("share_link_clicked", { feature: "share-link", channel: "whatsapp" })
 
 The same key list applies, walking nested objects. Pino's path-based redaction
 isn't available in the browser, so the implementation uses recursive key
-matching.
+matching. While walking, `Date` becomes an ISO string, nested `Error`s are
+serialized (name, message, stack, own props), `Map`/`Set` become an object/array,
+`URL`/`RegExp` become strings and circular references become `"[Circular]"`.
+Standard fields (`time`, `level`, `service`, `env`, `msg`) can't be overwritten
+by context or bindings.
 
 ### What this logger doesn't do
 

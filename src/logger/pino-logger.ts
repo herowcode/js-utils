@@ -1,20 +1,52 @@
-import pino, { type LoggerOptions, type Logger as PinoLogger } from "pino"
+import { createRequire } from "node:module"
+import type pinoFactory from "pino"
+import type { LoggerOptions, Logger as PinoLogger } from "pino"
 import { DEFAULT_REDACT_PATHS } from "./redact"
-import type {
-  ICreateLoggerOptions,
-  ILogger,
-  TLogContext,
-  TLogLevel,
-} from "./types"
+import type { ICreateLoggerOptions, ILogger, TLogContext } from "./types"
 
-function resolveLevel(opts: ICreateLoggerOptions): TLogLevel {
+const PINO_LEVELS = [
+  "fatal",
+  "error",
+  "warn",
+  "info",
+  "debug",
+  "trace",
+  "silent",
+]
+
+let cachedPino: typeof pinoFactory | undefined
+
+// pino is an optional peer, so it is resolved lazily; import.meta.url is undefined in the tsup CJS build, so __filename takes over
+function loadPino(): typeof pinoFactory {
+  if (cachedPino) return cachedPino
+  try {
+    const nodeRequire = createRequire(import.meta.url ?? __filename)
+    const mod = nodeRequire("pino")
+    cachedPino = mod.default ?? mod
+    return cachedPino as typeof pinoFactory
+  } catch (error) {
+    const code = (error as { code?: string } | null)?.code
+    if (code === "MODULE_NOT_FOUND" || code === "ERR_MODULE_NOT_FOUND") {
+      throw new Error(
+        '@herowcode/utils/logger: the Node logger needs "pino". Install it with: npm install pino',
+        { cause: error },
+      )
+    }
+    throw error
+  }
+}
+
+function resolveLevel(opts: ICreateLoggerOptions): string {
   if (opts.level) return opts.level
-  const envLevel = process.env.LOG_LEVEL as TLogLevel | undefined
-  if (envLevel) return envLevel
+  const envLevel = process.env.LOG_LEVEL
+  if (envLevel && PINO_LEVELS.includes(envLevel)) return envLevel
   return process.env.NODE_ENV === "production" ? "info" : "debug"
 }
 
-function buildBaseOptions(opts: ICreateLoggerOptions): LoggerOptions {
+function buildBaseOptions(
+  pino: typeof pinoFactory,
+  opts: ICreateLoggerOptions,
+): LoggerOptions {
   return {
     level: resolveLevel(opts),
     base: {
@@ -34,7 +66,8 @@ function buildBaseOptions(opts: ICreateLoggerOptions): LoggerOptions {
 }
 
 function buildPino(opts: ICreateLoggerOptions): PinoLogger {
-  const base = buildBaseOptions(opts)
+  const pino = loadPino()
+  const base = buildBaseOptions(pino, opts)
   if (process.env.NODE_ENV === "production") return pino(base)
 
   try {
