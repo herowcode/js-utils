@@ -189,3 +189,31 @@ describe("browser createLogger — hardening", () => {
     expect(payload.a).toBe(1)
   })
 })
+
+describe("browser createLogger — redaction scope", () => {
+  it("redacts secrets passed as child() bindings", () => {
+    process.env.NODE_ENV = "production"
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+    createLogger({ service: "s", level: "info" })
+      .child({ token: "t", user: { password: "p" } })
+      .info("evt")
+
+    const payload = JSON.parse(spy.mock.calls[0][0] as string)
+    expect(payload.token).toBe("[REDACTED]")
+    expect(payload.user.password).toBe("[REDACTED]")
+  })
+
+  it("applies custom paths across bindings and context", () => {
+    process.env.NODE_ENV = "production"
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+    createLogger({ service: "s", level: "info", redact: ["user.ssn"] })
+      .child({ user: { ssn: "1", id: 7 } })
+      .info("evt", { order: { ssn: "kept" } })
+
+    const payload = JSON.parse(spy.mock.calls[0][0] as string)
+    expect(payload.user).toEqual({ ssn: "[REDACTED]", id: 7 })
+    expect(payload.order.ssn).toBe("kept")
+  })
+})

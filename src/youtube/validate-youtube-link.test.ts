@@ -175,4 +175,80 @@ describe("validateYoutubeLink", () => {
 
     expect(await validateYoutubeLink("https://youtu.be/vid404")).toBe(false)
   })
+
+  describe("onError", () => {
+    it("reports an invalid URL as a validation error", async () => {
+      mockExtract.mockReturnValueOnce(null)
+      const onError = vi.fn()
+
+      await validateYoutubeLink("not-a-youtube-url", { onError })
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "validation" }),
+      )
+    })
+
+    it("reports the missing thumbnail and the oEmbed status", async () => {
+      mockExtract.mockReturnValueOnce("vid404")
+      ;(globalThis.fetch as unknown as Mock).mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as any)
+      const onError = vi.fn()
+
+      await validateYoutubeLink("https://youtu.be/vid404", { onError })
+
+      expect(onError.mock.calls.map(([e]) => e.source)).toEqual([
+        "thumbnail",
+        "oembed",
+      ])
+      expect(onError).toHaveBeenLastCalledWith(
+        expect.objectContaining({ source: "oembed", status: 404 }),
+      )
+    })
+
+    it("reports an oEmbed network error with the original error as cause", async () => {
+      mockExtract.mockReturnValueOnce("viderr")
+      const networkError = new Error("network")
+      ;(globalThis.fetch as unknown as Mock).mockRejectedValue(networkError)
+      const onError = vi.fn()
+
+      await validateYoutubeLink("https://youtu.be/viderr", { onError })
+
+      expect(onError).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          source: "oembed",
+          message: "network",
+          cause: networkError,
+        }),
+      )
+    })
+
+    it("skips the thumbnail probe and its report where Image is missing", async () => {
+      vi.stubGlobal("Image", undefined)
+      mockExtract.mockReturnValueOnce("vidnode")
+      ;(globalThis.fetch as unknown as Mock).mockResolvedValue({
+        ok: true,
+      } as any)
+      const onError = vi.fn()
+
+      const res = await validateYoutubeLink("https://youtu.be/vidnode", {
+        onError,
+      })
+
+      expect(res).toBe(true)
+      expect(onError).not.toHaveBeenCalled()
+    })
+
+    it("stays silent when a thumbnail proves the video exists", async () => {
+      mockExtract.mockReturnValueOnce("vidok")
+      successMap["https://img.youtube.com/vi/vidok/maxresdefault.jpg"] = true
+      const onError = vi.fn()
+
+      expect(
+        await validateYoutubeLink("https://youtu.be/vidok", { onError }),
+      ).toBe(true)
+      expect(onError).not.toHaveBeenCalled()
+    })
+  })
 })

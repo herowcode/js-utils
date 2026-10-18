@@ -1,24 +1,33 @@
 import { apiWrapper } from "./wrapper"
 
+export interface IRetryOptions {
+  limit?: number
+  methods?: readonly string[]
+  statusCodes?: readonly number[]
+  backoffLimit?: number
+  /** Longest Retry-After in ms to wait for; longer values are capped. */
+  maxRetryAfter?: number
+}
+
 export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
   json?: unknown
   params?: Record<string, string | number | boolean | null | undefined>
-  retry?: {
-    limit?: number
-    methods?: string[]
-    statusCodes?: number[]
-    backoffLimit?: number
-  }
+  /** Total time in ms for the request, retries and backoff included. */
+  timeout?: number
+  retry?: IRetryOptions
 }
 
-const defaultRetryConfig = {
+const defaultRetryConfig: Required<IRetryOptions> = {
   limit: 5,
   methods: ["get", "head"],
   statusCodes: [408, 429, 500, 502, 503, 504],
   backoffLimit: 3000,
+  maxRetryAfter: 10_000,
 }
 
 const MAX_RETRY_LIMIT = 10
+// setTimeout fires immediately for delays above 2^31-1 ms
+const MAX_TIMER_DELAY = 2 ** 31 - 1
 const MAX_BODY_SNIPPET = 200
 
 function buildQueryString(
@@ -36,6 +45,18 @@ function buildQueryString(
   return queryString ? `?${queryString}` : ""
 }
 
+// Callbacks can't be cancelled, so stop waiting for them once the request aborts
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason)
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason)
+    signal.addEventListener("abort", onAbort, { once: true })
+    promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener("abort", onAbort)
+    })
+  })
+}
+
 async function beforeRequestHook(
   request: Request,
   sendCredentials: boolean,
@@ -44,14 +65,20 @@ async function beforeRequestHook(
 ): Promise<Request> {
   if (!sendCredentials) return request
 
-  const token = await getAccessToken?.()
+  const token = await untilAborted(
+    Promise.resolve(getAccessToken?.()),
+    request.signal,
+  )
   const headers = new Headers(request.headers)
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`)
   }
 
-  const userIP = await getUserIP?.()
+  const userIP = await untilAborted(
+    Promise.resolve(getUserIP?.()),
+    request.signal,
+  )
   if (userIP) {
     headers.set("X-User-IP", userIP)
   }
@@ -88,9 +115,12 @@ async function afterResponseHook(
   }
 
   try {
-    await onSignoutUnauthorized?.(body)
+    await untilAborted(
+      Promise.resolve(onSignoutUnauthorized?.(body)),
+      request.signal,
+    )
   } catch {
-    // A failing callback must not mask the original 401
+    // A failing or timed-out callback must not mask the original 401
   }
 }
 
@@ -120,7 +150,7 @@ async function discardBody(response: Response): Promise<void> {
 
 async function fetchWithRetry(
   request: Request,
-  retry?: ICustomRequestInit["retry"],
+  retry?: IRetryOptions,
 ): Promise<Response> {
   const limit = Math.min(
     Math.max(retry?.limit ?? defaultRetryConfig.limit, 1),
@@ -131,6 +161,10 @@ async function fetchWithRetry(
   )
   const statusCodes = retry?.statusCodes ?? defaultRetryConfig.statusCodes
   const backoffLimit = retry?.backoffLimit ?? defaultRetryConfig.backoffLimit
+  const maxRetryAfter = Math.min(
+    Math.max(retry?.maxRetryAfter ?? defaultRetryConfig.maxRetryAfter, 0),
+    MAX_TIMER_DELAY,
+  )
   const retryable = methods.includes(request.method.toLowerCase())
   let attempt = 0
 
@@ -144,19 +178,66 @@ async function fetchWithRetry(
     } catch (error) {
       const aborted = (error as { name?: string } | null)?.name === "AbortError"
       if (!canRetry || aborted || request.signal.aborted) throw error
-      await sleep(Math.min(2 ** attempt * 100, backoffLimit))
+      await sleep(backoffDelay(attempt, backoffLimit), request.signal)
       continue
     }
 
     if (!canRetry || !statusCodes.includes(response.status)) return response
 
+    const retryAfter = parseRetryAfter(response.headers.get("Retry-After"))
+
     await discardBody(response)
-    await sleep(Math.min(2 ** attempt * 100, backoffLimit))
+    await sleep(
+      retryAfter === undefined
+        ? backoffDelay(attempt, backoffLimit)
+        : Math.min(retryAfter, maxRetryAfter),
+      request.signal,
+    )
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+// Equal jitter: spreads concurrent retries without dropping below half the backoff
+function backoffDelay(attempt: number, backoffLimit: number): number {
+  const base = Math.min(2 ** attempt * 100, backoffLimit)
+  return base / 2 + Math.random() * (base / 2)
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (value === null) return undefined
+  const trimmed = value.trim()
+  if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1000
+  // Date.parse accepts "1.5" or "-1" as dates; only real HTTP dates go through it
+  if (/^[+-]?[\d.]+$/.test(trimmed)) return undefined
+  const date = Date.parse(trimmed)
+  if (Number.isNaN(date)) return undefined
+  return Math.max(date - Date.now(), 0)
+}
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason)
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal.reason)
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort)
+      resolve()
+    }, ms)
+    signal.addEventListener("abort", onAbort, { once: true })
+  })
+}
+
+function withTimeout(
+  signal: AbortSignal | null | undefined,
+  timeout: number | undefined,
+): AbortSignal | null | undefined {
+  // 0, negative and non-finite values mean no timeout; 0 lets a request opt out of the client default
+  if (timeout === undefined || !Number.isFinite(timeout) || timeout <= 0) {
+    return signal
+  }
+  const timeoutSignal = AbortSignal.timeout(Math.ceil(timeout))
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
 }
 
 export type TApiClientProps = {
@@ -164,6 +245,10 @@ export type TApiClientProps = {
   onSignoutUnauthorized?: (response?: unknown) => void
   getAccessToken?: () => Promise<string | null>
   getUserIP?: () => Promise<string | undefined>
+  /** Default `timeout` in ms for every request; a per-request `timeout` wins. */
+  timeout?: number
+  /** Default `redirect` mode for every request; a per-request `redirect` wins. */
+  redirect?: RequestRedirect
 }
 
 async function api<T>(
@@ -192,6 +277,8 @@ async function api<T>(
     credentials: "include",
     ...options,
   }
+  const redirect = options.redirect ?? config.redirect
+  if (redirect) init.redirect = redirect
 
   let body: RequestInit["body"]
   if (options.json !== undefined && options.json !== null) {
@@ -214,7 +301,8 @@ async function api<T>(
   }
 
   const target = resolveUrl(url)
-  let request = new Request(target?.href ?? url, { ...init, body })
+  const signal = withTimeout(init.signal, options.timeout ?? config.timeout)
+  let request = new Request(target?.href ?? url, { ...init, body, signal })
 
   const credentialOrigin = resolveUrl(config.baseURL ?? "")?.origin
   const sendCredentials =

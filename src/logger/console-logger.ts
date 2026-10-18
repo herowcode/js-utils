@@ -1,4 +1,4 @@
-import { browserRedact } from "./redact"
+import { compileRedactRules, type IRedactRules, redactWith } from "./redact"
 import type {
   ICreateLoggerOptions,
   ILogger,
@@ -23,16 +23,26 @@ function readEnvLevel(): TLogLevel | undefined {
     const fromStorage = ls?.getItem?.("LOG_LEVEL")
     if (isLevel(fromStorage)) return fromStorage
   }
-  const envLevel =
-    typeof process !== "undefined" ? process.env?.LOG_LEVEL : undefined
+  const envLevel = readEnv(() => process.env.LOG_LEVEL)
   if (isLevel(envLevel)) return envLevel
   return undefined
 }
 
+// Bundlers inline only the exact `process.env.NODE_ENV` text, so no typeof guard or `?.`
+function readEnv(read: () => string | undefined): string | undefined {
+  try {
+    return read()
+  } catch {
+    return undefined
+  }
+}
+
+function nodeEnv(): string | undefined {
+  return readEnv(() => process.env.NODE_ENV)
+}
+
 function isProduction(): boolean {
-  return (
-    typeof process !== "undefined" && process.env?.NODE_ENV === "production"
-  )
+  return nodeEnv() === "production"
 }
 
 function resolveLevel(opts: ICreateLoggerOptions): TLogLevel {
@@ -49,23 +59,16 @@ function serializeError(err: unknown): unknown {
   return err
 }
 
-function normalizeContext(
-  ctx: TLogContext | undefined,
-  redact: readonly string[] | undefined,
-): TLogContext | undefined {
-  if (!ctx) return undefined
-  const next: TLogContext = {}
-  for (const [k, v] of Object.entries(ctx)) {
-    next[k] = k === "err" ? serializeError(v) : v
-  }
-  return browserRedact(next, redact)
+function serializeErr(ctx: TLogContext | undefined): TLogContext {
+  if (!ctx || !("err" in ctx)) return ctx ?? {}
+  return { ...ctx, err: serializeError(ctx.err) }
 }
 
 interface IBrowserLoggerState {
   service: string
   level: TLogLevel
   bindings: TLogContext
-  redact: readonly string[] | undefined
+  redact: IRedactRules
 }
 
 function emit(
@@ -76,10 +79,11 @@ function emit(
 ): void {
   if (LEVEL_ORDER[level] < LEVEL_ORDER[state.level]) return
 
-  const merged = {
-    ...state.bindings,
-    ...(normalizeContext(ctx, state.redact) ?? {}),
-  }
+  // Redact bindings and context together so paths resolve from the log root, as in pino
+  const merged = redactWith(
+    { ...state.bindings, ...serializeErr(ctx) },
+    state.redact,
+  )
 
   if (isProduction()) {
     const payload = {
@@ -87,7 +91,7 @@ function emit(
       time: new Date().toISOString(),
       level,
       service: state.service,
-      env: process.env.NODE_ENV,
+      env: nodeEnv(),
       msg,
     }
     console.log(JSON.stringify(payload))
@@ -133,6 +137,6 @@ export function createLogger(opts: ICreateLoggerOptions): ILogger {
     service: opts.service,
     level: resolveLevel(opts),
     bindings: opts.bindings ?? {},
-    redact: opts.redact,
+    redact: compileRedactRules(opts.redact),
   })
 }

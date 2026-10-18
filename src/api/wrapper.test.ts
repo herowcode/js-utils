@@ -207,6 +207,31 @@ describe("apiWrapper", () => {
     })
   })
 
+  describe("Error handling - error names", () => {
+    it("exposes a timeout's name so it can be told apart from a caller abort", async () => {
+      const timeout = await apiWrapper(() =>
+        Promise.reject(new DOMException("timed out", "TimeoutError")),
+      )
+      const abort = await apiWrapper(() =>
+        Promise.reject(new DOMException("aborted", "AbortError")),
+      )
+
+      expect(timeout.error?.name).toBe("TimeoutError")
+      expect(abort.error?.name).toBe("AbortError")
+      // The legacy numeric DOMException codes stay for 2.x compatibility
+      expect(timeout.error?.code).toBe("23")
+      expect(abort.error?.code).toBe("20")
+    })
+
+    it("exposes the name of Error subclasses", async () => {
+      const result = await apiWrapper(() =>
+        Promise.reject(new TypeError("fetch failed")),
+      )
+
+      expect(result.error?.name).toBe("TypeError")
+    })
+  })
+
   describe("Error handling - Unknown errors", () => {
     it("should handle string error", async () => {
       const mockApiCall = vi.fn().mockRejectedValue("String error")

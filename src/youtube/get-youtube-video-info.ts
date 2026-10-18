@@ -1,3 +1,11 @@
+import {
+  type IYouTubeErrorOptions,
+  type IYouTubeSourceError,
+  reportInvalidUrl,
+  reportYouTubeError,
+  type TYouTubeErrorSource,
+} from "./youtube-error"
+
 type TYtThumbnail = {
   url: string
   width?: number
@@ -75,32 +83,84 @@ export type TYouTubeVideoInfo = {
 
 const FETCH_TIMEOUT_MS = 8000
 
-const videoInfoCache = new Map<string, Promise<TYouTubeVideoInfo | null>>()
+function sourceFailure(
+  message: string,
+  status?: number,
+  cause?: unknown,
+): Error {
+  return Object.assign(new Error(message, { cause }), { status })
+}
+
+const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_MAX_ENTRIES = 100
+
+type TFetchResult = {
+  info: TYouTubeVideoInfo | null
+  errors: IYouTubeSourceError[]
+}
+
+type TCacheEntry = {
+  pending: Promise<TFetchResult>
+  expiresAt?: number
+}
+
+// Insertion order doubles as LRU order: a hit is re-inserted at the end
+const videoInfoCache = new Map<string, TCacheEntry>()
 
 export async function getYoutubeVideoInfo(
   videoUrl: string,
+  options?: IYouTubeErrorOptions,
 ): Promise<TYouTubeVideoInfo | null> {
   const { extractYouTubeId } = await import("./extract-youtube-video-id")
   const videoId = extractYouTubeId(videoUrl)
-  if (!videoId) return null
-
-  let pending = videoInfoCache.get(videoId)
-  if (!pending) {
-    pending = fetchYoutubeVideoInfo(videoId).then(
-      (info) => {
-        if (!info) videoInfoCache.delete(videoId)
-        return info
-      },
-      (error) => {
-        videoInfoCache.delete(videoId)
-        throw error
-      },
-    )
-    videoInfoCache.set(videoId, pending)
+  if (!videoId) {
+    reportInvalidUrl(options)
+    return null
   }
 
-  const info = await pending
+  let entry = videoInfoCache.get(videoId)
+  if (entry?.expiresAt !== undefined && Date.now() >= entry.expiresAt) {
+    entry = undefined
+  }
+  videoInfoCache.delete(videoId)
+
+  if (!entry) {
+    const created: TCacheEntry = {
+      pending: fetchYoutubeVideoInfo(videoId).then(
+        (result) => {
+          if (result.info) {
+            created.expiresAt = Date.now() + CACHE_TTL_MS
+            // Later hits shouldn't replay stale failures or keep them alive for the TTL
+            created.pending = Promise.resolve({ info: result.info, errors: [] })
+          } else {
+            evict(videoId, created)
+          }
+          return result
+        },
+        (error) => {
+          evict(videoId, created)
+          throw error
+        },
+      ),
+    }
+    entry = created
+  }
+
+  videoInfoCache.set(videoId, entry)
+  while (videoInfoCache.size > CACHE_MAX_ENTRIES) {
+    const oldest = videoInfoCache.keys().next().value as string
+    videoInfoCache.delete(oldest)
+  }
+
+  // Every caller sharing the in-flight fetch hears its failures
+  const { info, errors } = await entry.pending
+  for (const error of errors) reportYouTubeError(options, { ...error })
   return info && cloneVideoInfo(info)
+}
+
+// Only drop the entry this request created, never a newer one for the same id
+function evict(videoId: string, entry: TCacheEntry): void {
+  if (videoInfoCache.get(videoId) === entry) videoInfoCache.delete(videoId)
 }
 
 function cloneVideoInfo(info: TYouTubeVideoInfo): TYouTubeVideoInfo {
@@ -111,28 +171,43 @@ function cloneVideoInfo(info: TYouTubeVideoInfo): TYouTubeVideoInfo {
   }
 }
 
-async function fetchYoutubeVideoInfo(
-  videoId: string,
-): Promise<TYouTubeVideoInfo | null> {
+const SOURCES: readonly [
+  TYouTubeErrorSource,
+  (videoId: string, watchUrl: string) => Promise<TYouTubeVideoInfo>,
+][] = [
+  ["innertube", fetchFromInnertube],
+  ["watch-page", fetchFromWatchPage],
+  ["oembed", fetchFromOEmbed],
+  ["noembed", fetchFromNoEmbed],
+]
+
+async function fetchYoutubeVideoInfo(videoId: string): Promise<TFetchResult> {
   const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
 
-  const results = await Promise.allSettled([
-    fetchFromInnertube(videoId, watchUrl),
-    fetchFromWatchPage(videoId, watchUrl),
-    fetchFromOEmbed(videoId, watchUrl),
-    fetchFromNoEmbed(videoId, watchUrl),
-  ])
+  const results = await Promise.allSettled(
+    SOURCES.map(([, fetchSource]) => fetchSource(videoId, watchUrl)),
+  )
 
   const sources: TYouTubeVideoInfo[] = []
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value) {
+  const errors: IYouTubeSourceError[] = []
+  results.forEach((result, i) => {
+    if (result.status === "fulfilled") {
       sources.push(result.value)
+      return
     }
+    const reason = result.reason as { message?: unknown; status?: unknown }
+    errors.push({
+      source: SOURCES[i][0],
+      message: String(reason?.message ?? reason),
+      status: typeof reason?.status === "number" ? reason.status : undefined,
+      cause: result.reason,
+    })
+  })
+
+  return {
+    info: sources.length ? mergeVideoInfo(sources, videoId, watchUrl) : null,
+    errors,
   }
-
-  if (!sources.length) return null
-
-  return mergeVideoInfo(sources, videoId, watchUrl)
 }
 
 function mergeVideoInfo(
@@ -254,7 +329,10 @@ const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
 async function fetchFromInnertube(
   videoId: string,
   watchUrl: string,
-): Promise<TYouTubeVideoInfo | null> {
+): Promise<TYouTubeVideoInfo> {
+  const failures: string[] = []
+  let lastStatus: number | undefined
+  let lastError: unknown
   for (const client of INNERTUBE_CLIENTS) {
     try {
       const response = await fetch(
@@ -274,12 +352,19 @@ async function fetchFromInnertube(
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         },
       )
-      if (!response.ok) continue
+      if (!response.ok) {
+        lastStatus = response.status
+        failures.push(`${client.name}: HTTP ${response.status}`)
+        continue
+      }
 
       const data = (await response.json()) as TYtPlayerResponse
       const details = data.videoDetails
       const microformat = data.microformat?.playerMicroformatRenderer
-      if (!details && !microformat) continue
+      if (!details && !microformat) {
+        failures.push(`${client.name}: no video details in response`)
+        continue
+      }
 
       const thumbnails = getThumbnails(details, microformat)
       const bestThumbnail = selectBestThumbnail(thumbnails)
@@ -305,12 +390,13 @@ async function fetchFromInnertube(
           details?.isLiveContent ??
           microformat?.liveBroadcastDetails?.isLiveNow,
       }
-    } catch {
-      // try next client
+    } catch (error) {
+      lastError = error
+      failures.push(`${client.name}: ${(error as Error)?.message ?? error}`)
     }
   }
 
-  return null
+  throw sourceFailure(failures.join("; "), lastStatus, lastError)
 }
 
 const WATCH_PAGE_HEADERS: Record<string, string> = {
@@ -325,151 +411,139 @@ const WATCH_PAGE_HEADERS: Record<string, string> = {
 async function fetchFromWatchPage(
   videoId: string,
   watchUrl: string,
-): Promise<TYouTubeVideoInfo | null> {
-  try {
-    const response = await fetch(watchUrl, {
-      headers: WATCH_PAGE_HEADERS,
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-    if (!response.ok) {
-      return null
-    }
+): Promise<TYouTubeVideoInfo> {
+  const response = await fetch(watchUrl, {
+    headers: WATCH_PAGE_HEADERS,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    throw sourceFailure(`HTTP ${response.status}`, response.status)
+  }
 
-    const html = await response.text()
-    const rawJson = extractJsonBlock(html, "ytInitialPlayerResponse")
-    if (!rawJson) {
-      return null
-    }
+  const html = await response.text()
+  const rawJson = extractJsonBlock(html, "ytInitialPlayerResponse")
+  if (!rawJson) {
+    throw sourceFailure("ytInitialPlayerResponse not found in the page")
+  }
 
-    const data = JSON.parse(rawJson) as TYtPlayerResponse
-    const details = data.videoDetails
-    const microformat = data.microformat?.playerMicroformatRenderer
+  const data = JSON.parse(rawJson) as TYtPlayerResponse
+  const details = data.videoDetails
+  const microformat = data.microformat?.playerMicroformatRenderer
 
-    if (!details && !microformat) {
-      return null
-    }
+  if (!details && !microformat) {
+    throw sourceFailure("no video details in ytInitialPlayerResponse")
+  }
 
-    const thumbnails = getThumbnails(details, microformat)
-    const bestThumbnail = selectBestThumbnail(thumbnails)
+  const thumbnails = getThumbnails(details, microformat)
+  const bestThumbnail = selectBestThumbnail(thumbnails)
 
-    return {
-      id: details?.videoId ?? videoId,
-      url: watchUrl,
-      title: details?.title ?? extractText(microformat?.title) ?? "",
-      channelTitle: details?.author ?? microformat?.ownerChannelName ?? "",
-      channelId: details?.channelId ?? microformat?.externalChannelId,
-      channelUrl: microformat?.ownerProfileUrl,
-      description:
-        extractText(microformat?.description) ?? details?.shortDescription,
-      shortDescription: details?.shortDescription,
-      thumbnails,
-      thumbnail: bestThumbnail?.url,
-      publishedAt: microformat?.publishDate ?? microformat?.uploadDate,
-      uploadedAt: microformat?.uploadDate,
-      keywords: details?.keywords,
-      viewCount: parseNumber(details?.viewCount),
-      lengthSeconds: parseNumber(details?.lengthSeconds),
-      isLive:
-        details?.isLiveContent ?? microformat?.liveBroadcastDetails?.isLiveNow,
-    }
-  } catch {
-    return null
+  return {
+    id: details?.videoId ?? videoId,
+    url: watchUrl,
+    title: details?.title ?? extractText(microformat?.title) ?? "",
+    channelTitle: details?.author ?? microformat?.ownerChannelName ?? "",
+    channelId: details?.channelId ?? microformat?.externalChannelId,
+    channelUrl: microformat?.ownerProfileUrl,
+    description:
+      extractText(microformat?.description) ?? details?.shortDescription,
+    shortDescription: details?.shortDescription,
+    thumbnails,
+    thumbnail: bestThumbnail?.url,
+    publishedAt: microformat?.publishDate ?? microformat?.uploadDate,
+    uploadedAt: microformat?.uploadDate,
+    keywords: details?.keywords,
+    viewCount: parseNumber(details?.viewCount),
+    lengthSeconds: parseNumber(details?.lengthSeconds),
+    isLive:
+      details?.isLiveContent ?? microformat?.liveBroadcastDetails?.isLiveNow,
   }
 }
 
 async function fetchFromOEmbed(
   videoId: string,
   watchUrl: string,
-): Promise<TYouTubeVideoInfo | null> {
-  try {
-    const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(
-      watchUrl,
-    )}&format=json`
-    const response = await fetch(oEmbedUrl, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-    if (!response.ok) {
-      return null
-    }
+): Promise<TYouTubeVideoInfo> {
+  const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(
+    watchUrl,
+  )}&format=json`
+  const response = await fetch(oEmbedUrl, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    throw sourceFailure(`HTTP ${response.status}`, response.status)
+  }
 
-    const data = (await response.json()) as TYtOEmbedResponse
-    if (!data?.title || !data?.author_name) {
-      return null
-    }
+  const data = (await response.json()) as TYtOEmbedResponse
+  if (!data?.title || !data?.author_name) {
+    throw sourceFailure("response has no title or author_name")
+  }
 
-    const thumbnails = createThumbnailList(
-      data.thumbnail_url,
-      data.thumbnail_width,
-      data.thumbnail_height,
-    )
+  const thumbnails = createThumbnailList(
+    data.thumbnail_url,
+    data.thumbnail_width,
+    data.thumbnail_height,
+  )
 
-    return {
-      id: videoId,
-      url: watchUrl,
-      title: data.title,
-      channelTitle: data.author_name,
-      channelUrl: data.author_url,
-      thumbnails,
-      thumbnail: thumbnails[0]?.url,
-      description: undefined,
-      shortDescription: undefined,
-      publishedAt: undefined,
-      uploadedAt: undefined,
-      keywords: undefined,
-      viewCount: undefined,
-      lengthSeconds: undefined,
-      isLive: undefined,
-    }
-  } catch {
-    return null
+  return {
+    id: videoId,
+    url: watchUrl,
+    title: data.title,
+    channelTitle: data.author_name,
+    channelUrl: data.author_url,
+    thumbnails,
+    thumbnail: thumbnails[0]?.url,
+    description: undefined,
+    shortDescription: undefined,
+    publishedAt: undefined,
+    uploadedAt: undefined,
+    keywords: undefined,
+    viewCount: undefined,
+    lengthSeconds: undefined,
+    isLive: undefined,
   }
 }
 
 async function fetchFromNoEmbed(
   videoId: string,
   watchUrl: string,
-): Promise<TYouTubeVideoInfo | null> {
-  try {
-    const noEmbedUrl = `https://noembed.com/embed?url=${encodeURIComponent(
-      watchUrl,
-    )}`
-    const response = await fetch(noEmbedUrl, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-    if (!response.ok) {
-      return null
-    }
+): Promise<TYouTubeVideoInfo> {
+  const noEmbedUrl = `https://noembed.com/embed?url=${encodeURIComponent(
+    watchUrl,
+  )}`
+  const response = await fetch(noEmbedUrl, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    throw sourceFailure(`HTTP ${response.status}`, response.status)
+  }
 
-    const data = (await response.json()) as TNoEmbedResponse
-    if (!data?.title || !data?.author_name) {
-      return null
-    }
+  const data = (await response.json()) as TNoEmbedResponse
+  if (!data?.title || !data?.author_name) {
+    throw sourceFailure("response has no title or author_name")
+  }
 
-    const thumbnails = createThumbnailList(
-      data.thumbnail_url,
-      data.thumbnail_width,
-      data.thumbnail_height,
-    )
+  const thumbnails = createThumbnailList(
+    data.thumbnail_url,
+    data.thumbnail_width,
+    data.thumbnail_height,
+  )
 
-    return {
-      id: videoId,
-      url: watchUrl,
-      title: data.title,
-      channelTitle: data.author_name,
-      channelUrl: data.author_url,
-      description: data.description,
-      shortDescription: data.description,
-      thumbnails,
-      thumbnail: thumbnails[0]?.url,
-      publishedAt: data.upload_date,
-      uploadedAt: data.upload_date,
-      keywords: undefined,
-      viewCount: undefined,
-      lengthSeconds: undefined,
-      isLive: undefined,
-    }
-  } catch {
-    return null
+  return {
+    id: videoId,
+    url: watchUrl,
+    title: data.title,
+    channelTitle: data.author_name,
+    channelUrl: data.author_url,
+    description: data.description,
+    shortDescription: data.description,
+    thumbnails,
+    thumbnail: thumbnails[0]?.url,
+    publishedAt: data.upload_date,
+    uploadedAt: data.upload_date,
+    keywords: undefined,
+    viewCount: undefined,
+    lengthSeconds: undefined,
+    isLive: undefined,
   }
 }
 

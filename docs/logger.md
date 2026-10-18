@@ -161,15 +161,23 @@ log.info("share_link_clicked", { feature: "share-link", channel: "whatsapp" })
 
 ### Default level
 
-- `warn` in production. Override at runtime via `localStorage.LOG_LEVEL = 'debug'`
+- `info` in production. Override at runtime via `localStorage.LOG_LEVEL = 'debug'`
   to debug a live session without redeploying.
 - `debug` in development.
 
+Production means `process.env.NODE_ENV === 'production'` as inlined by your
+bundler (webpack, Next.js, Vite and esbuild `define` all replace that exact
+expression). With no bundler and no `process`, the logger falls back to
+development.
+
 ### Redaction
 
-The same key list applies, walking nested objects. Pino's path-based redaction
-isn't available in the browser, so the implementation uses recursive key
-matching. While walking, `Date` becomes an ISO string, nested `Error`s are
+The same key list applies, matched case-insensitively at any depth, plus
+`secret`. `redact` entries use pino's path syntax: a plain key (`ssn`) is
+matched at any depth, while an entry with `.`, `[` or `*` is a path from the
+log root (`user.ssn`, `headers["x-api-key"]`, `items[*].pan`, `*.card`), where
+`*` matches exactly one segment. Bindings from `child()` are redacted along
+with the context. While walking, `Date` becomes an ISO string, nested `Error`s are
 serialized (name, message, stack, own props), `Map`/`Set` become an object/array,
 `URL`/`RegExp` become strings and circular references become `"[Circular]"`.
 Standard fields (`time`, `level`, `service`, `env`, `msg`) can't be overwritten

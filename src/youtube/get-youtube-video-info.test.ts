@@ -396,3 +396,195 @@ describe("getYoutubeVideoInfo", () => {
     expect(info).toBeNull()
   })
 })
+
+describe("getYoutubeVideoInfo cache limits", () => {
+  const oneHourMs = 60 * 60 * 1000
+
+  function countingFetch() {
+    const calls = new Map<string, number>()
+    const fetchMock = makeFetchMock({
+      innertube: (body) => {
+        const id = (body as { videoId: string }).videoId
+        calls.set(id, (calls.get(id) ?? 0) + 1)
+        return jsonResponse(samplePlayerResponse)
+      },
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    return calls
+  }
+
+  const urlFor = (n: number) =>
+    `https://youtu.be/vid${String(n).padStart(8, "0")}`
+  const idFor = (n: number) => `vid${String(n).padStart(8, "0")}`
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("refetches once a cached entry is older than an hour", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    const calls = countingFetch()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    await getYoutubeVideoInfo(validUrl)
+    vi.advanceTimersByTime(oneHourMs - 1)
+    await getYoutubeVideoInfo(validUrl)
+    expect(calls.get("dQw4w9WgXcQ")).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await getYoutubeVideoInfo(validUrl)
+    expect(calls.get("dQw4w9WgXcQ")).toBe(2)
+  })
+
+  it("keeps at most 100 videos, evicting the least recently used", async () => {
+    const calls = countingFetch()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    for (let n = 0; n < 100; n++) await getYoutubeVideoInfo(urlFor(n))
+    await getYoutubeVideoInfo(urlFor(0)) // touch: 1 becomes the oldest
+    await getYoutubeVideoInfo(urlFor(100))
+
+    await getYoutubeVideoInfo(urlFor(0))
+    await getYoutubeVideoInfo(urlFor(1))
+
+    expect(calls.get(idFor(0))).toBe(1)
+    expect(calls.get(idFor(1))).toBe(2)
+  })
+})
+
+describe("getYoutubeVideoInfo onError", () => {
+  it("reports why each source failed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      makeFetchMock({
+        innertube: () => notFound(),
+        watch: () => htmlResponse("<html>no player data</html>"),
+        oembed: () => jsonResponse({}, false),
+        noembed: () => jsonResponse({ error: "no title" }),
+      }),
+    )
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo(validUrl, { onError })
+
+    expect(info).toBeNull()
+    const bySource = Object.fromEntries(
+      onError.mock.calls.map(([error]) => [error.source, error]),
+    )
+    expect(Object.keys(bySource).sort()).toEqual([
+      "innertube",
+      "noembed",
+      "oembed",
+      "watch-page",
+    ])
+    expect(bySource.innertube).toMatchObject({ status: 404 })
+    expect(bySource.innertube.message).toMatch(/ANDROID.*404.*WEB.*404/)
+    expect(bySource["watch-page"].message).toMatch(/ytInitialPlayerResponse/)
+    expect(bySource.oembed).toMatchObject({ status: 500 })
+    expect(bySource.noembed.message).toMatch(/title/)
+  })
+
+  it("reports network errors with the original error as cause", async () => {
+    const networkError = new TypeError("Failed to fetch")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input).includes("noembed.com")) throw networkError
+        return jsonResponse(samplePlayerResponse)
+      }),
+    )
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo(validUrl, { onError })
+
+    expect(info?.title).toBe("Sample title")
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "noembed",
+        message: "Failed to fetch",
+        cause: networkError,
+      }),
+    )
+  })
+
+  it("ignores errors thrown by the callback", async () => {
+    vi.stubGlobal("fetch", makeFetchMock({}))
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo(validUrl, {
+      onError: () => {
+        throw new Error("callback bug")
+      },
+    })
+
+    expect(info).toBeNull()
+  })
+
+  it("replays failures to every caller sharing the in-flight fetch", async () => {
+    let calls = 0
+    vi.stubGlobal(
+      "fetch",
+      makeFetchMock({
+        innertube: () => {
+          calls++
+          return jsonResponse(samplePlayerResponse)
+        },
+      }),
+    )
+    const first = vi.fn()
+    const second = vi.fn()
+    const later = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    await Promise.all([
+      getYoutubeVideoInfo(validUrl, { onError: first }),
+      getYoutubeVideoInfo(validUrl, { onError: second }),
+    ])
+    await getYoutubeVideoInfo(validUrl, { onError: later })
+
+    expect(calls).toBe(1)
+    const sources = (fn: typeof first) =>
+      fn.mock.calls.map(([error]) => error.source).sort()
+    expect(sources(first)).toEqual(["noembed", "oembed", "watch-page"])
+    expect(sources(second)).toEqual(sources(first))
+    // Settled cache hits don't repeat stale failures
+    expect(later).not.toHaveBeenCalled()
+  })
+
+  it("reports an invalid URL as a validation error", async () => {
+    vi.stubGlobal("fetch", makeFetchMock({}))
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo("https://example.com/x", { onError })
+
+    expect(info).toBeNull()
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ source: "validation" }),
+    )
+  })
+
+  it("keeps innertube's original network error as the cause", async () => {
+    const networkError = new TypeError("Failed to fetch")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input).includes("/youtubei/v1/player")) throw networkError
+        return jsonResponse(samplePlayerResponse)
+      }),
+    )
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    await getYoutubeVideoInfo(validUrl, { onError })
+
+    const innertube = onError.mock.calls.find(
+      ([error]) => error.source === "innertube",
+    )?.[0]
+    expect(innertube.message).toMatch(/ANDROID: Failed to fetch/)
+    expect((innertube.cause as Error).cause).toBe(networkError)
+  })
+})

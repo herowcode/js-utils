@@ -86,4 +86,17 @@ describe("getYoutubeThumbnail", () => {
     const result = await getYoutubeThumbnail("https://youtu.be/jkl012")
     expect(result).toBeNull()
   })
+
+  it("reports an invalid URL and a missing thumbnail through onError", async () => {
+    const onError = vi.fn()
+    mockExtract.mockReturnValueOnce(null)
+    await getYoutubeThumbnail("not-a-video-url", { onError })
+    mockExtract.mockReturnValueOnce("mno345")
+    await getYoutubeThumbnail("https://youtu.be/mno345", { onError })
+
+    expect(onError.mock.calls.map(([e]) => e.source)).toEqual([
+      "validation",
+      "thumbnail",
+    ])
+  })
 })

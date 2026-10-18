@@ -3,6 +3,8 @@ import type { TTryCatchResult } from "../function"
 // Define a richer error type to capture more information
 export interface IApiError {
   message: string
+  /** The thrown error's `name` when it is not a plain `Error`, e.g. "TimeoutError" or "AbortError". */
+  name?: string
   status?: number
   code?: string
   details?: unknown
@@ -90,6 +92,7 @@ function extractStandardErrorDetails(error: Error): IApiError {
   const errorObj: IApiError = {
     message: error.message,
   }
+  if (error.name && error.name !== "Error") errorObj.name = error.name
 
   // Capture any custom properties the error might have
   const extendedError = error as ExtendedError
@@ -151,8 +154,12 @@ async function processError(error: unknown): Promise<IApiError> {
     return extractAxiosErrorDetails(error)
   }
 
-  if (error instanceof Error) {
-    return extractStandardErrorDetails(error)
+  // DOMException is not an Error subclass in every runtime (e.g. jsdom)
+  if (
+    error instanceof Error ||
+    (typeof DOMException !== "undefined" && error instanceof DOMException)
+  ) {
+    return extractStandardErrorDetails(error as Error)
   }
 
   // Handle unknown error types
