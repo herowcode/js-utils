@@ -5,6 +5,8 @@ export interface IRetryOptions {
   methods?: readonly string[]
   statusCodes?: readonly number[]
   backoffLimit?: number
+  /** Longest Retry-After in ms to wait for; longer values are capped. */
+  maxRetryAfter?: number
 }
 
 export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
@@ -20,6 +22,7 @@ const defaultRetryConfig: Required<IRetryOptions> = {
   methods: ["get", "head"],
   statusCodes: [408, 429, 500, 502, 503, 504],
   backoffLimit: 3000,
+  maxRetryAfter: 10_000,
 }
 
 const MAX_RETRY_LIMIT = 10
@@ -135,6 +138,8 @@ async function fetchWithRetry(
   )
   const statusCodes = retry?.statusCodes ?? defaultRetryConfig.statusCodes
   const backoffLimit = retry?.backoffLimit ?? defaultRetryConfig.backoffLimit
+  const maxRetryAfter =
+    retry?.maxRetryAfter ?? defaultRetryConfig.maxRetryAfter
   const retryable = methods.includes(request.method.toLowerCase())
   let attempt = 0
 
@@ -148,15 +153,37 @@ async function fetchWithRetry(
     } catch (error) {
       const aborted = (error as { name?: string } | null)?.name === "AbortError"
       if (!canRetry || aborted || request.signal.aborted) throw error
-      await sleep(Math.min(2 ** attempt * 100, backoffLimit), request.signal)
+      await sleep(backoffDelay(attempt, backoffLimit), request.signal)
       continue
     }
 
     if (!canRetry || !statusCodes.includes(response.status)) return response
 
+    const retryAfter = parseRetryAfter(response.headers.get("Retry-After"))
+
     await discardBody(response)
-    await sleep(Math.min(2 ** attempt * 100, backoffLimit), request.signal)
+    await sleep(
+      retryAfter === undefined
+        ? backoffDelay(attempt, backoffLimit)
+        : Math.min(retryAfter, maxRetryAfter),
+      request.signal,
+    )
   }
+}
+
+// Equal jitter: spreads concurrent retries without dropping below half the backoff
+function backoffDelay(attempt: number, backoffLimit: number): number {
+  const base = Math.min(2 ** attempt * 100, backoffLimit)
+  return base / 2 + Math.random() * (base / 2)
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (value === null) return undefined
+  const trimmed = value.trim()
+  if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1000
+  const date = Date.parse(trimmed)
+  if (Number.isNaN(date)) return undefined
+  return Math.max(date - Date.now(), 0)
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
