@@ -79,7 +79,7 @@ generateYoutubeURL({ videoURL: 'https://youtu.be/dQw4w9WgXcQ', start: 90, end: 1
 
 ---
 
-## `getYoutubeVideoInfo(videoUrl)`
+## `getYoutubeVideoInfo(videoUrl, options?)`
 
 Fetches comprehensive metadata about a YouTube video. Queries **four sources in parallel** and merges their results — no API key required.
 
@@ -110,6 +110,19 @@ All sources run in parallel via `Promise.allSettled`. Each field uses the first 
 The InnerTube endpoint is used first because it works reliably from datacenter/containerized environments where YouTube serves a consent page to the regular watch URL. If one source returns partial data, another may fill the gaps (e.g. InnerTube provides `description`/`lengthSeconds` while oEmbed contributes an additional thumbnail size).
 
 Concurrent calls for the same video ID share a single in-flight request. Results are cached per video ID for 1 hour, keeping at most the 100 most recently used videos. Failed requests are evicted from cache so the next call retries. Each request aborts after 8 seconds. Every call returns its own copy of the result, so mutating it does not affect the cache. Returns `null` only if **all** sources fail.
+
+### Failure reasons
+
+Pass `onError` to learn why a source failed. It is called once per failed source, even when another source succeeds, with `{ source, message, status?, cause? }` (`IYouTubeSourceError`; `status` is the HTTP status, `cause` the original error). It only fires for the call that actually fetches: cached results and calls sharing an in-flight request don't repeat it. Errors thrown by the callback are ignored.
+
+```typescript
+const info = await getYoutubeVideoInfo(url, {
+  onError: ({ source, message, status }) => log.warn('yt_source_failed', { source, message, status }),
+});
+// e.g. { source: 'innertube', message: 'ANDROID: HTTP 403; WEB: HTTP 403', status: 403 }
+```
+
+Sources are `'innertube'`, `'watch-page'`, `'oembed'` and `'noembed'`.
 
 ### Return type
 
@@ -169,7 +182,7 @@ const isInvalid = await validateYoutubeLink('https://youtu.be/INVALID_ID');
 
 ---
 
-## `getYoutubeVideoDuration(videoUrl)` _(browser)_
+## `getYoutubeVideoDuration(videoUrl, options?)` _(browser)_
 
 Gets the duration of a YouTube video using the IFrame API. Returns a formatted string or `null`.
 
@@ -181,6 +194,8 @@ const duration = await getYoutubeVideoDuration('https://youtu.be/dQw4w9WgXcQ');
 ```
 
 Automatically loads the YouTube IFrame API if not already present. Creates an offscreen iframe, waits for the player to report its duration, then cleans up. Resolves `null` if the IFrame API fails to load (script error or 10 second timeout) or the player does not report a duration within 10 seconds. In Node.js this function throws (rejects).
+
+`onError` works as in `getYoutubeVideoInfo`, with source `'validation'` (the link check failed), `'iframe-api'` (the API did not load) or `'player'` (player error, with the IFrame error code as `status`, a timeout, or no duration). An invalid URL returns `null` without calling it.
 
 ---
 

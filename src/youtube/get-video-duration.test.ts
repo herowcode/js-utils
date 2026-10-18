@@ -528,4 +528,54 @@ describe("getYoutubeVideoDuration", () => {
 
     expect(getDuration.mock.calls.length).toBe(callsAtError)
   })
+
+  describe("onError", () => {
+    const url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+    it("reports a link that fails validation", async () => {
+      ;(validateYoutubeLink as unknown as Mock).mockResolvedValueOnce(false)
+      const onError = vi.fn()
+
+      expect(await getYoutubeVideoDuration(url, { onError })).toBeNull()
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "validation" }),
+      )
+    })
+
+    it("reports the player error code", async () => {
+      mockYTAPI.Player = vi.fn().mockImplementation(function (
+        _id: string,
+        config: any,
+      ) {
+        setTimeout(() => config.events.onError({ data: 150 }), 10)
+        return mockYTPlayer
+      })
+      const onError = vi.fn()
+
+      expect(await getYoutubeVideoDuration(url, { onError })).toBeNull()
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "player", status: 150 }),
+      )
+    })
+
+    it("reports a player construction failure with its cause", async () => {
+      const boom = new Error("Player construction failed")
+      mockYTAPI.Player = vi.fn().mockImplementation(function () {
+        throw boom
+      })
+      const onError = vi.fn()
+
+      expect(await getYoutubeVideoDuration(url, { onError })).toBeNull()
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "player", cause: boom }),
+      )
+    })
+
+    it("does not call onError on success", async () => {
+      const onError = vi.fn()
+
+      expect(await getYoutubeVideoDuration(url, { onError })).toBe("03:15")
+      expect(onError).not.toHaveBeenCalled()
+    })
+  })
 })

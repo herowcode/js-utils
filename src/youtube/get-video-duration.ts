@@ -2,6 +2,7 @@
 import { formatSecondsToHMS } from "../string"
 import { extractYouTubeId } from "./extract-youtube-video-id"
 import { validateYoutubeLink } from "./validate-youtube-link"
+import { type IYouTubeErrorOptions, reportYouTubeError } from "./youtube-error"
 
 const API_SRC = "https://www.youtube.com/iframe_api"
 const API_LOAD_TIMEOUT_MS = 10000
@@ -65,18 +66,35 @@ function loadYouTubeIFrameAPI(): Promise<void> {
 /** Resolves to the duration ("MM:SS", or "HH:MM:SS" past an hour), or null when the video or the IFrame API fails. */
 export async function getYoutubeVideoDuration(
   videoUrl: string,
+  options?: IYouTubeErrorOptions,
 ): Promise<string | null> {
   const videoId = extractYouTubeId(videoUrl)
   if (!videoId) return null
 
   const videoIsValid = await validateYoutubeLink(videoUrl)
-  if (!videoIsValid) return null
+  if (!videoIsValid) {
+    reportYouTubeError(options, {
+      source: "validation",
+      message: "video not found or unreachable",
+    })
+    return null
+  }
 
   try {
     await loadYouTubeIFrameAPI()
-  } catch {
+  } catch (error) {
+    reportYouTubeError(options, {
+      source: "iframe-api",
+      message: (error as Error).message,
+      cause: error,
+    })
     return null
   }
+
+  const fail = (
+    message: string,
+    extra?: { status?: number; cause?: unknown },
+  ) => reportYouTubeError(options, { source: "player", message, ...extra })
 
   return await new Promise<string | null>((resolve) => {
     const iframeId = `yt-duration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -98,6 +116,14 @@ export async function getYoutubeVideoDuration(
     let cleanupTimeout: number | null = null
     let retryInterval: ReturnType<typeof setInterval> | undefined
 
+    function failAndResolve(
+      message: string,
+      extra?: { status?: number; cause?: unknown },
+    ) {
+      if (!resolved) fail(message, extra)
+      cleanupAndResolve(null)
+    }
+
     function cleanupAndResolve(result: string | null) {
       if (resolved) return
       resolved = true
@@ -117,7 +143,7 @@ export async function getYoutubeVideoDuration(
     }
 
     cleanupTimeout = window.setTimeout(() => {
-      cleanupAndResolve(null)
+      failAndResolve("player timed out after 10s")
     }, 10000)
 
     document.body.appendChild(iframe)
@@ -140,29 +166,32 @@ export async function getYoutubeVideoDuration(
                       cleanupAndResolve(formatSecondsToHMS(duration))
                     } else if (attempts >= 8) {
                       clearInterval(retryInterval)
-                      cleanupAndResolve(null)
+                      failAndResolve("player reported no duration")
                     }
-                  } catch {
+                  } catch (error) {
                     if (attempts >= 8) {
                       clearInterval(retryInterval)
-                      cleanupAndResolve(null)
+                      failAndResolve("getDuration failed", { cause: error })
                     }
                   }
                 }, 300)
               } else {
                 cleanupAndResolve(formatSecondsToHMS(duration))
               }
-            } catch {
-              cleanupAndResolve(null)
+            } catch (error) {
+              failAndResolve("getDuration failed", { cause: error })
             }
           },
-          onError: () => {
-            cleanupAndResolve(null)
+          onError: (e: any) => {
+            const code = typeof e?.data === "number" ? e.data : undefined
+            failAndResolve(`player error ${code ?? "unknown"}`, {
+              status: code,
+            })
           },
         },
       })
-    } catch {
-      cleanupAndResolve(null)
+    } catch (error) {
+      failAndResolve("could not create the player", { cause: error })
     }
   })
 }

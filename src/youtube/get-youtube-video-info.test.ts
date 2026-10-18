@@ -451,3 +451,74 @@ describe("getYoutubeVideoInfo cache limits", () => {
     expect(calls.get(idFor(1))).toBe(2)
   })
 })
+
+describe("getYoutubeVideoInfo onError", () => {
+  it("reports why each source failed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      makeFetchMock({
+        innertube: () => notFound(),
+        watch: () => htmlResponse("<html>no player data</html>"),
+        oembed: () => jsonResponse({}, false),
+        noembed: () => jsonResponse({ error: "no title" }),
+      }),
+    )
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo(validUrl, { onError })
+
+    expect(info).toBeNull()
+    const bySource = Object.fromEntries(
+      onError.mock.calls.map(([error]) => [error.source, error]),
+    )
+    expect(Object.keys(bySource).sort()).toEqual([
+      "innertube",
+      "noembed",
+      "oembed",
+      "watch-page",
+    ])
+    expect(bySource.innertube).toMatchObject({ status: 404 })
+    expect(bySource.innertube.message).toMatch(/ANDROID.*404.*WEB.*404/)
+    expect(bySource["watch-page"].message).toMatch(/ytInitialPlayerResponse/)
+    expect(bySource.oembed).toMatchObject({ status: 500 })
+    expect(bySource.noembed.message).toMatch(/title/)
+  })
+
+  it("reports network errors with the original error as cause", async () => {
+    const networkError = new TypeError("Failed to fetch")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input).includes("noembed.com")) throw networkError
+        return jsonResponse(samplePlayerResponse)
+      }),
+    )
+    const onError = vi.fn()
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo(validUrl, { onError })
+
+    expect(info?.title).toBe("Sample title")
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "noembed",
+        message: "Failed to fetch",
+        cause: networkError,
+      }),
+    )
+  })
+
+  it("ignores errors thrown by the callback", async () => {
+    vi.stubGlobal("fetch", makeFetchMock({}))
+    const { getYoutubeVideoInfo } = await importModule()
+
+    const info = await getYoutubeVideoInfo(validUrl, {
+      onError: () => {
+        throw new Error("callback bug")
+      },
+    })
+
+    expect(info).toBeNull()
+  })
+})
