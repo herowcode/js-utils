@@ -40,6 +40,7 @@ await client.delete('/users/1');
 | `onSignoutUnauthorized` | `(body?: unknown) => void` | Called on 401 responses, except when the URL path contains `signin`, `sign-in` or `login`. Errors thrown by the callback are ignored |
 | `getUserIP` | `() => Promise<string \| undefined>` | Called before every request; result injected as `X-User-IP`. Only sent when the request origin equals the `baseURL` origin |
 | `timeout` | `number` | Default request timeout in ms. Unset means no timeout |
+| `redirect` | `RequestRedirect` | Default `redirect` mode (`"follow"`, `"error"` or `"manual"`). Unset means the fetch default, `"follow"` |
 
 ### Timeouts
 
@@ -76,6 +77,8 @@ Override per request with `retry: { limit, methods, statusCodes, backoffLimit }`
 ### Cross-origin requests
 
 `Authorization` and `X-User-IP` are attached only when the request origin equals the `baseURL` origin. Absolute URLs pointing to another origin are sent without them. Only these injected headers are origin-scoped: cookies still follow `credentials` (default `"include"`), and headers you pass yourself go wherever the request goes. A relative `baseURL` such as `"/api"` resolves against the page origin, and without `baseURL` the page origin is used; in Node, a missing or relative `baseURL` means no credentials are attached. `onSignoutUnauthorized` only fires for 401s from that same origin.
+
+Fetch drops `Authorization` when a redirect crosses origins, but not custom headers such as `X-User-IP`. To keep them from following a redirect to another host, set `redirect: "error"` (fail on any redirect) or `"manual"` (return the 3xx, or an opaque redirect in browsers, as an error) on the client or per request.
 
 ### Invalid JSON responses
 
