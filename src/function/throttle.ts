@@ -1,15 +1,13 @@
-type TAnyFunction = (...args: unknown[]) => unknown
-
 /**
  * Creates a throttled function that only invokes func at most once per every delay milliseconds
  * @param fn - The function to throttle
  * @param delay - The number of milliseconds to throttle invocations to
  * @returns The throttled function
  */
-export function throttle<T extends TAnyFunction>(
-  fn: T,
+export function throttle<A extends unknown[]>(
+  fn: (...args: A) => unknown,
   delay: number,
-): (...args: Parameters<T>) => void {
+): (...args: A) => void {
   if (typeof fn !== "function") {
     throw new Error("First argument must be a function")
   }
@@ -21,7 +19,7 @@ export function throttle<T extends TAnyFunction>(
   let lastCall = 0
   let timeoutId: ReturnType<typeof setTimeout> | undefined
 
-  return function (this: unknown, ...args: Parameters<T>) {
+  return function (this: unknown, ...args: A) {
     const now = Date.now()
 
     if (now - lastCall >= delay) {

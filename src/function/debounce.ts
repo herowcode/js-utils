@@ -1,5 +1,3 @@
-type TAnyFunction = (...args: unknown[]) => unknown
-
 /**
  * Creates a debounced function that delays invoking func until after delay milliseconds
  * have elapsed since the last time the debounced function was invoked
@@ -7,10 +5,10 @@ type TAnyFunction = (...args: unknown[]) => unknown
  * @param delay - The number of milliseconds to delay
  * @returns The debounced function
  */
-export function debounce<T extends TAnyFunction>(
-  fn: T,
+export function debounce<A extends unknown[]>(
+  fn: (...args: A) => unknown,
   delay: number,
-): (...args: Parameters<T>) => void {
+): (...args: A) => void {
   if (typeof fn !== "function") {
     throw new Error("First argument must be a function")
   }
@@ -21,7 +19,7 @@ export function debounce<T extends TAnyFunction>(
 
   let timeoutId: ReturnType<typeof setTimeout> | undefined
 
-  return function (this: unknown, ...args: Parameters<T>) {
+  return function (this: unknown, ...args: A) {
     if (timeoutId) {
       clearTimeout(timeoutId)
     }

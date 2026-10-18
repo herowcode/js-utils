@@ -32,7 +32,7 @@ window.addEventListener('resize', onResize);
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `fn` | `Function` | The function to debounce |
+| `fn` | `(...args: A) => unknown` | The function to debounce; its parameter types carry over to the returned function |
 | `delay` | `number` | Milliseconds to wait after the last call |
 
 ---
@@ -58,7 +58,7 @@ const saveChanges = throttle(async (data) => {
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `fn` | `Function` | The function to throttle |
+| `fn` | `(...args: A) => unknown` | The function to throttle; its parameter types carry over to the returned function |
 | `delay` | `number` | Minimum milliseconds between invocations |
 
 ---
