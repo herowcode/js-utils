@@ -224,6 +224,22 @@ describe("validateYoutubeLink", () => {
       )
     })
 
+    it("skips the thumbnail probe and its report where Image is missing", async () => {
+      vi.stubGlobal("Image", undefined)
+      mockExtract.mockReturnValueOnce("vidnode")
+      ;(globalThis.fetch as unknown as Mock).mockResolvedValue({
+        ok: true,
+      } as any)
+      const onError = vi.fn()
+
+      const res = await validateYoutubeLink("https://youtu.be/vidnode", {
+        onError,
+      })
+
+      expect(res).toBe(true)
+      expect(onError).not.toHaveBeenCalled()
+    })
+
     it("stays silent when a thumbnail proves the video exists", async () => {
       mockExtract.mockReturnValueOnce("vidok")
       successMap["https://img.youtube.com/vi/vidok/maxresdefault.jpg"] = true

@@ -128,8 +128,13 @@ export async function getYoutubeVideoInfo(
     const created: TCacheEntry = {
       pending: fetchYoutubeVideoInfo(videoId).then(
         (result) => {
-          if (result.info) created.expiresAt = Date.now() + CACHE_TTL_MS
-          else evict(videoId, created)
+          if (result.info) {
+            created.expiresAt = Date.now() + CACHE_TTL_MS
+            // Later hits shouldn't replay stale failures or keep them alive for the TTL
+            created.pending = Promise.resolve({ info: result.info, errors: [] })
+          } else {
+            evict(videoId, created)
+          }
           return result
         },
         (error) => {
@@ -147,12 +152,9 @@ export async function getYoutubeVideoInfo(
     videoInfoCache.delete(oldest)
   }
 
-  // Callers sharing an in-flight fetch all hear its failures; settled hits don't replay stale ones
-  const inFlight = entry.expiresAt === undefined
+  // Every caller sharing the in-flight fetch hears its failures
   const { info, errors } = await entry.pending
-  if (inFlight) {
-    for (const error of errors) reportYouTubeError(options, error)
-  }
+  for (const error of errors) reportYouTubeError(options, { ...error })
   return info && cloneVideoInfo(info)
 }
 

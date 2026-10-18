@@ -17,8 +17,11 @@ export async function validateYoutubeLink(
     return false
   }
 
-  if (await findYoutubeThumbnail(videoId)) return true
-  reportMissingThumbnail(options)
+  // Outside the browser there is no Image to probe with, so go straight to oEmbed
+  if (typeof Image !== "undefined") {
+    if (await findYoutubeThumbnail(videoId)) return true
+    reportMissingThumbnail(options)
+  }
 
   // Fallback: oEmbed (may be subject to CORS in some environments)
   try {

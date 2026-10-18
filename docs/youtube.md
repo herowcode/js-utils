@@ -182,7 +182,7 @@ const isInvalid = await validateYoutubeLink('https://youtu.be/INVALID_ID');
 // → false (video doesn't exist or is private)
 ```
 
-`onError` reports an invalid URL (source `'validation'`), no usable thumbnail (`'thumbnail'`, also when oEmbed then succeeds) and an oEmbed failure (`'oembed'`, with the HTTP `status` or the network error as `cause`).
+`onError` reports an invalid URL (source `'validation'`), no usable thumbnail (`'thumbnail'`, also when oEmbed then succeeds; outside the browser the thumbnail probe is skipped) and an oEmbed failure (`'oembed'`, with the HTTP `status` or the network error as `cause`).
 
 ---
 
