@@ -48,6 +48,23 @@ for (const [specifier, expectedKeys] of Object.entries(expectedExports)) {
   assertModuleExports(specifier, expectedKeys, ["browser"])
 }
 
+// These entries must stay dependency-free so consumers never pull pino, dayjs or node builtins through them.
+for (const entry of [
+  "index.js",
+  "index.cjs",
+  "array/index.js",
+  "function/index.js",
+  "string/index.js",
+  "string/index.cjs",
+]) {
+  const external = collectExternalImports(path.join(DIST, entry))
+  assert.deepEqual(
+    external,
+    [],
+    `dist/${entry} must not import external modules, found: ${external.join(", ")}`,
+  )
+}
+
 console.log("✔ built package exports verified")
 
 function collectTypePaths(node, found = new Set()) {
@@ -64,6 +81,26 @@ function collectTypePaths(node, found = new Set()) {
   }
 
   return [...found]
+}
+
+function collectExternalImports(file, seen = new Set(), found = new Set()) {
+  if (seen.has(file)) return [...found]
+  seen.add(file)
+  const source = fs.readFileSync(file, "utf8")
+  const pattern =
+    /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\(\s*|\bimport\s+)["']([^"']+)["']/g
+  for (const [, specifier] of source.matchAll(pattern)) {
+    if (specifier.startsWith(".")) {
+      collectExternalImports(
+        path.resolve(path.dirname(file), specifier),
+        seen,
+        found,
+      )
+    } else {
+      found.add(specifier)
+    }
+  }
+  return [...found].sort()
 }
 
 function assertModuleExports(specifier, expectedKeys, conditions = []) {

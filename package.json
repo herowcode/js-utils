@@ -161,20 +161,23 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "prebuild": "node scripts/sync-exports.cjs",
     "build": "tsup --config tsup.config.ts",
+    "check": "biome check . && tsc --noEmit",
     "lint": "biome check --write --unsafe && tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:exports": "node scripts/verify-exports.cjs",
+    "test:package": "publint --strict && attw --pack . --profile node16",
     "test:coverage": "vitest run --coverage",
-    "prepare": "pnpm build",
-    "prepublishOnly": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports",
-    "version:patch": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version patch && git push && git push --tags",
-    "version:minor": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version minor && git push && git push --tags",
-    "version:major": "pnpm lint && pnpm test:run && pnpm build && pnpm test:exports && npm version major && git push && git push --tags"
+    "size": "size-limit",
+    "changeset": "changeset",
+    "prepublishOnly": "pnpm build && pnpm test:exports"
   },
   "keywords": [
     "utils",
@@ -187,33 +190,39 @@
     "dayjs"
   ],
   "dependencies": {
-    "axios": "1.12.2",
-    "clsx": "^2.1.1",
-    "dayjs": "^1.11.10",
-    "pino": "^9.5.0",
-    "tailwind-merge": "3.5.0"
+    "dayjs": "^1.11.10"
   },
   "peerDependencies": {
+    "pino": "^9.5.0 || ^10.0.0",
     "pino-pretty": ">=11"
   },
   "peerDependenciesMeta": {
+    "pino": {
+      "optional": true
+    },
     "pino-pretty": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@biomejs/biome": "2.1.4",
+    "@changesets/cli": "3.0.3",
+    "@size-limit/preset-small-lib": "14.2.0",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.8.0",
     "@types/node": "25.3.3",
-    "@vitest/coverage-v8": "3.2.4",
-    "@vitest/ui": "3.2.4",
-    "jest-environment-jsdom": "30.1.2",
+    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/ui": "4.1.11",
     "jsdom": "26.1.0",
+    "pino": "9.14.0",
     "pino-pretty": "^11.3.0",
+    "publint": "0.3.25",
+    "size-limit": "14.2.0",
     "tsup": "8.5.1",
     "typescript": "^5.2.2",
-    "vitest": "3.2.4"
+    "vite": "7.3.5",
+    "vitest": "4.1.11"
   },
   "author": {
     "name": "Judson Junior",
@@ -233,7 +242,15 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "@biomejs/biome"
-    ]
+    ],
+    "overrides": {
+      "nanoid@<3.3.18": "^3.3.18",
+      "postcss@<8.5.23": "^8.5.23",
+      "rollup@<4.59.0": "^4.59.0",
+      "source-map-js@<1.2.2": "^1.2.2",
+      "ws@<8.21.0": "^8.21.0",
+      "fast-copy@<3.1.0": "^3.1.0"
+    }
   },
   "packageManager": "pnpm@10.30.1"
 }

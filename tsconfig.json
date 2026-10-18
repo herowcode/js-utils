@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "ES2022",
     "module": "ESNext",
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "lib": ["ES2018", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
