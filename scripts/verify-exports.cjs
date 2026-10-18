@@ -8,7 +8,9 @@ const DIST = path.join(ROOT, "dist")
 const PKG_PATH = path.join(ROOT, "package.json")
 
 if (!fs.existsSync(DIST)) {
-  throw new Error("dist/ was not found. Run `pnpm build` before `pnpm test:exports`.")
+  throw new Error(
+    "dist/ was not found. Run `pnpm build` before `pnpm test:exports`.",
+  )
 }
 
 const pkg = JSON.parse(fs.readFileSync(PKG_PATH, "utf8"))
@@ -35,7 +37,10 @@ assert.equal(pkg.type, "module", 'package.json must declare `"type": "module"`')
 
 for (const typesPath of collectTypePaths(pkg.exports)) {
   const resolvedPath = path.join(ROOT, typesPath)
-  assert.ok(fs.existsSync(resolvedPath), `Missing declaration target: ${typesPath}`)
+  assert.ok(
+    fs.existsSync(resolvedPath),
+    `Missing declaration target: ${typesPath}`,
+  )
 }
 
 for (const [specifier, expectedKeys] of Object.entries(expectedExports)) {

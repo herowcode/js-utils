@@ -86,6 +86,9 @@ jobs:
       - name: Build package
         run: pnpm build
 
+      - name: Verify exports
+        run: pnpm test:exports
+
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:

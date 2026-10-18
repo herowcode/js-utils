@@ -1,9 +1,9 @@
-import '@testing-library/jest-dom'
+import "@testing-library/jest-dom"
 
 // Mock window.location if needed for your YouTube tests
-Object.defineProperty(window, 'location', {
+Object.defineProperty(window, "location", {
   value: {
-    origin: 'http://localhost:3000',
+    origin: "http://localhost:3000",
   },
   writable: true,
 })
