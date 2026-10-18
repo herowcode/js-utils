@@ -62,11 +62,7 @@ function loadYouTubeIFrameAPI(): Promise<void> {
   return YtApiLoading
 }
 
-/**
- * getYoutubeVideoDuration
- * Returns a function that accepts a YouTube URL (full or short) and returns a Promise
- * resolving to the video duration formatted as "HH:MM:SS" or null on failure.
- */
+/** Resolves to the duration ("MM:SS", or "HH:MM:SS" past an hour), or null when the video or the IFrame API fails. */
 export async function getYoutubeVideoDuration(
   videoUrl: string,
 ): Promise<string | null> {
@@ -85,7 +81,6 @@ export async function getYoutubeVideoDuration(
   return await new Promise<string | null>((resolve) => {
     const iframeId = `yt-duration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     const iframe = document.createElement("iframe")
-    // create a minimal offscreen iframe for the player
     iframe.id = iframeId
     iframe.style.position = "fixed"
     iframe.style.left = "-9999px"
@@ -121,14 +116,12 @@ export async function getYoutubeVideoDuration(
       resolve(result)
     }
 
-    // timeout fallback
     cleanupTimeout = window.setTimeout(() => {
       cleanupAndResolve(null)
-    }, 10000) // 10s timeout
+    }, 10000)
 
     document.body.appendChild(iframe)
 
-    // Construct player
     try {
       player = new (window as any).YT.Player(iframeId, {
         events: {

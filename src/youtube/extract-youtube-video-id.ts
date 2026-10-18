@@ -3,12 +3,14 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i
 const YOUTUBE_HOSTS = ["youtube.com", "youtube-nocookie.com"]
 const SHORT_HOST = "youtu.be"
 const VIDEO_PATH_PREFIXES = ["embed", "shorts", "live", "v", "e"]
+// Playlist and live-channel embeds use 11-character words that look like IDs
+const RESERVED_SEGMENTS = ["videoseries", "live_stream"]
 
 const isHost = (hostname: string, host: string) =>
   hostname === host || hostname.endsWith(`.${host}`)
 
 const validId = (id: string | null | undefined) =>
-  id && VIDEO_ID.test(id) ? id : null
+  id && VIDEO_ID.test(id) && !RESERVED_SEGMENTS.includes(id) ? id : null
 
 export function extractYouTubeId(urlString: string | null): string | null {
   if (!urlString) return null

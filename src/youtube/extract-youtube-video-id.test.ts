@@ -68,6 +68,8 @@ describe("extractYouTubeId", () => {
     "https://www.youtube.com/c/abcdefghijk",
     "https://www.youtube.com/user/abcdefghijk",
     "https://www.youtube.com/some/path/dQw4w9WgXcQ/",
+    "https://www.youtube.com/embed/videoseries?list=PL1234567890",
+    "https://www.youtube.com/embed/live_stream?channel=UC123",
   ])("ignores 11-character segments outside video paths in %s", (url) => {
     expect(extractYouTubeId(url)).toBeNull()
   })
