@@ -72,7 +72,7 @@ interface IApiError {
 
 By default `GET` and `HEAD` requests are retried on network errors and on status `408`, `429`, `500`, `502`, `503` and `504`, up to 5 attempts with exponential backoff (capped at 3000 ms). Aborted requests are never retried.
 
-Override per request with `retry: { limit, methods, statusCodes, backoffLimit }`. Provided fields are merged with the defaults, `methods` are matched case-insensitively, and `limit` is capped at 10 attempts. Network errors are retried only for the configured `methods`.
+Override per request with `retry: { limit, methods, statusCodes, backoffLimit }` (exported as the `IRetryOptions` type; arrays may be `readonly`). Provided fields are merged with the defaults, `methods` are matched case-insensitively, and `limit` is capped at 10 attempts. Network errors are retried only for the configured `methods`.
 
 ### Cross-origin requests
 
