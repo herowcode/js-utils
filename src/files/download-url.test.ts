@@ -96,11 +96,29 @@ describe("downloadUrl", () => {
     consoleErrorSpy.mockRestore()
   })
 
-  it("revokes the object URL and removes the anchor after download", async () => {
-    await downloadUrl("https://example.com/files/test.txt")
+  it("removes the anchor at once but revokes the object URL only after the download starts", async () => {
+    vi.useFakeTimers()
+    try {
+      await downloadUrl("https://example.com/files/test.txt")
 
-    expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:url")
-    expect(document.body.removeChild).toHaveBeenCalledWith(link)
+      expect(document.body.removeChild).toHaveBeenCalledWith(link)
+      expect(window.URL.revokeObjectURL).not.toHaveBeenCalled()
+
+      vi.runAllTimers()
+      expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:url")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("still reports success when removing the anchor throws", async () => {
+    document.body.removeChild = vi.fn(() => {
+      throw new Error("already detached")
+    })
+
+    await expect(
+      downloadUrl("https://example.com/files/test.txt"),
+    ).resolves.toBe(true)
   })
 
   it("returns false on a non-2xx response without creating a link", async () => {
@@ -136,7 +154,6 @@ describe("downloadUrl", () => {
     const result = await downloadUrl("https://example.com/files/test.txt")
 
     expect(result).toBe(false)
-    expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:url")
     expect(document.body.removeChild).toHaveBeenCalledWith(link)
     consoleErrorSpy.mockRestore()
   })

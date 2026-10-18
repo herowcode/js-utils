@@ -1,3 +1,5 @@
+const REVOKE_DELAY_MS = 1000
+
 export const downloadUrl = async (url: string): Promise<boolean> => {
   let link: HTMLAnchorElement | undefined
   let appended = false
@@ -33,7 +35,14 @@ export const downloadUrl = async (url: string): Promise<boolean> => {
     console.error("Error downloading the file", error)
     return false
   } finally {
-    if (link && appended) document.body.removeChild(link)
-    if (objectUrl) window.URL.revokeObjectURL(objectUrl)
+    try {
+      if (link && appended) document.body.removeChild(link)
+    } catch {
+      // The anchor was already detached; the download outcome stands
+    }
+    // Revoking in the same tick can cancel the download in Safari and Firefox
+    const pending = objectUrl
+    if (pending)
+      setTimeout(() => window.URL.revokeObjectURL(pending), REVOKE_DELAY_MS)
   }
 }
