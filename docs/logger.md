@@ -59,7 +59,7 @@ Every line in production includes:
 
 ## Node — `createLogger`
 
-The Node logger needs `pino`, which is an optional peer dependency. Install it before using the Node entrypoint; without it `createLogger` throws a clear error.
+The Node logger needs `pino`, which is an optional peer dependency. Install it before using the Node entrypoint; without it `createLogger` throws a clear error. When bundling server code (Next.js standalone, esbuild, Lambda), keep `pino` external: it is resolved at runtime, so a bundler won't trace it.
 
 ```bash
 npm install pino

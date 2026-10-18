@@ -14,9 +14,11 @@ const PINO_LEVELS = [
   "silent",
 ]
 
+const RESERVED_KEYS = ["level", "time", "msg", "service", "env"]
+
 let cachedPino: typeof pinoFactory | undefined
 
-// pino is an optional peer, so it is resolved lazily; import.meta.url is undefined in the tsup CJS build, so __filename takes over
+// pino is an optional peer, so it loads lazily; __filename covers the CJS build where import.meta.url is undefined
 function loadPino(): typeof pinoFactory {
   if (cachedPino) return cachedPino
   try {
@@ -26,7 +28,11 @@ function loadPino(): typeof pinoFactory {
     return cachedPino as typeof pinoFactory
   } catch (error) {
     const code = (error as { code?: string } | null)?.code
-    if (code === "MODULE_NOT_FOUND" || code === "ERR_MODULE_NOT_FOUND") {
+    const missingPino = /['"]pino['"]/.test(String((error as Error)?.message))
+    if (
+      (code === "MODULE_NOT_FOUND" || code === "ERR_MODULE_NOT_FOUND") &&
+      missingPino
+    ) {
       throw new Error(
         '@herowcode/utils/logger: the Node logger needs "pino". Install it with: npm install pino',
         { cause: error },
@@ -50,9 +56,9 @@ function buildBaseOptions(
   return {
     level: resolveLevel(opts),
     base: {
+      ...withoutReserved(opts.bindings),
       service: opts.service,
       env: process.env.NODE_ENV ?? "development",
-      ...opts.bindings,
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {
@@ -87,17 +93,25 @@ function buildPino(opts: ICreateLoggerOptions): PinoLogger {
   }
 }
 
+// pino appends context after its own fields, so a reserved key would emit a duplicate JSON key
+function withoutReserved<T extends object>(ctx: T | undefined): Partial<T> {
+  if (!ctx) return {}
+  return Object.fromEntries(
+    Object.entries(ctx).filter(([key]) => !RESERVED_KEYS.includes(key)),
+  ) as Partial<T>
+}
+
 function wrap(p: PinoLogger): ILogger {
   return {
     debug: (msg: string, ctx?: TLogContext) =>
-      ctx ? p.debug(ctx, msg) : p.debug(msg),
+      ctx ? p.debug(withoutReserved(ctx), msg) : p.debug(msg),
     info: (msg: string, ctx?: TLogContext) =>
-      ctx ? p.info(ctx, msg) : p.info(msg),
+      ctx ? p.info(withoutReserved(ctx), msg) : p.info(msg),
     warn: (msg: string, ctx?: TLogContext) =>
-      ctx ? p.warn(ctx, msg) : p.warn(msg),
+      ctx ? p.warn(withoutReserved(ctx), msg) : p.warn(msg),
     error: (msg: string, ctx?: TLogContext) =>
-      ctx ? p.error(ctx, msg) : p.error(msg),
-    child: (bindings) => wrap(p.child(bindings)),
+      ctx ? p.error(withoutReserved(ctx), msg) : p.error(msg),
+    child: (bindings) => wrap(p.child(withoutReserved(bindings))),
   }
 }
 
