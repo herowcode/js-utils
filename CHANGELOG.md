@@ -1,5 +1,24 @@
 # @herowcode/utils
 
+## 2.1.0
+
+### Minor Changes
+
+- 6e70f1a: `/api`: `IApiError` gains an optional `name` with the thrown error's name when it is not a plain `Error`, so a timeout (`"TimeoutError"`) can be told apart from a caller abort (`"AbortError"`) without matching the legacy numeric `code` (`"23"`/`"20"`, unchanged). `DOMException`s are now recognised even where they don't extend `Error` (e.g. jsdom), instead of collapsing to the message `"{}"`.
+- 6e70f1a: `/api`: add a client-level `redirect` option (`apiClient({ redirect: "error" })`) applied to every request; a per-request `redirect` still wins. The default stays `"follow"`.
+- 6e70f1a: `/api`: retries honour `Retry-After` (seconds or HTTP date) and add jitter to the exponential backoff, which now waits between half and all of the previous delay. The `Retry-After` wait is capped by the new `retry.maxRetryAfter` (10 s by default).
+- 6e70f1a: `/api`: export the `IRetryOptions` type. `retry.methods` and `retry.statusCodes` now accept readonly arrays, so shared `as const` configs type-check.
+- 6e70f1a: `/api`: add an opt-in `timeout` (ms) per request or on `apiClient({ timeout })`. It covers `getAccessToken`, `getUserIP`, the network requests, retries and backoff waits, and combines with the caller's `signal`; `timeout: 0` opts a request out of the client default. Once aborted, the request stops waiting for `onSignoutUnauthorized` and still returns the 401. Backoff waits now stop as soon as the request is aborted.
+- 6e70f1a: `/youtube`: `getYoutubeVideoInfo`, `getYoutubeVideoDuration`, `getYoutubeThumbnail` and `validateYoutubeLink` accept an opt-in `{ onError }` that receives each failure reason (`{ source, message, status?, cause? }`) instead of only returning `null`/`false`. Invalid URLs are reported with source `"validation"`, and every caller sharing an in-flight `getYoutubeVideoInfo` request gets its failures. The `IYouTubeErrorOptions`, `IYouTubeSourceError` and `TYouTubeErrorSource` types are exported.
+
+### Patch Changes
+
+- 6e70f1a: `/logger` (browser): production is now detected in bundled apps. The logger read `process.env?.NODE_ENV` behind a `typeof process` guard, which bundler `define` replacements never match, so browser builds always logged at debug level in dev format. It now reads the exact `process.env.NODE_ENV` expression.
+  
+  Upgrade note: in bundled production browser apps, every level (including `warn` and `error`) is now one JSON line through `console.log`, and `debug` is dropped. Error trackers that hook `console.error`/`console.warn` (e.g. Sentry's console integration) stop seeing these logs; forward them explicitly or set `level`/`localStorage.LOG_LEVEL` as needed.
+- 6e70f1a: `/logger` (browser): `redact` entries now follow pino's path syntax (`user.ssn`, `headers["x-api-key"]`, `items[*].pan`, `*.card`) instead of being treated as literal key names that never matched. Plain keys still match at any depth. Secrets passed as `child()` bindings are now redacted too.
+- 6e70f1a: `/youtube`: `getYoutubeVideoInfo` caches each result for 1 hour and keeps at most the 100 most recently used videos, instead of holding every video forever.
+
 ## 2.0.0
 
 ### Major Changes
