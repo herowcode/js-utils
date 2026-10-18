@@ -212,18 +212,31 @@ describe("formatDate", () => {
       expect(formatDate(sample, new Intl.Locale("en-US"))).toContain("December")
     })
 
-    it.each(["MM", "DD", "MMM", "YYYY", "YY", "HH", "mm", "DD/MM/YYYY"])(
-      "should treat %s as a dayjs format",
-      (token) => {
-        const expected = dayjs(sample).format(token)
-        expect(formatDate(sample, token)).toBe(expected)
-      },
-    )
+    it.each([
+      "MM",
+      "DD",
+      "MMM",
+      "YYYY",
+      "YY",
+      "HH",
+      "mm",
+      "DD/MM/YYYY",
+      "DD-MM",
+      "MM-DD",
+      "YY-MM",
+      "hh-mm",
+    ])("should treat %s as a dayjs format", (token) => {
+      const expected = dayjs(sample).format(token)
+      expect(formatDate(sample, token)).toBe(expected)
+    })
 
     it.each([
       ["en-US", "December"],
       ["pt-BR", "dezembro"],
       ["fr", "décembre"],
+      ["pt-br", "dezembro"],
+      ["de-DE", "Dezember"],
+      ["zh-Hans-CN", "12"],
     ])("should treat %s as a locale", (locale, month) => {
       expect(formatDate(sample, locale)).toContain(month)
     })

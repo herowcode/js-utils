@@ -89,8 +89,12 @@ function isValidLocaleTag(value: string): boolean {
     typeof Intl.getCanonicalLocales === "function"
   ) {
     try {
-      Intl.getCanonicalLocales(value)
-      return true
+      const [canonical] = Intl.getCanonicalLocales(value)
+      // "DD-MM" parses as a locale; a non-canonical tag built from tokens is a format
+      return (
+        canonical === value ||
+        !value.split("-").some((part) => DAYJS_TOKENS.has(part))
+      )
     } catch {
       return false
     }
