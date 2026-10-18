@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: Mocked data can be any */
+/** biome-ignore-all lint/complexity/useArrowFunction: vitest 4 runs mocks invoked with `new` as constructors; arrows are not constructible */
 import {
   afterEach,
   beforeEach,
@@ -85,7 +86,10 @@ describe("getYoutubeVideoDuration", () => {
 
     // Mock YT API
     mockYTAPI = {
-      Player: vi.fn().mockImplementation((_elementId: string, config: any) => {
+      Player: vi.fn().mockImplementation(function (
+        _elementId: string,
+        config: any,
+      ) {
         // Simulate async ready event
         setTimeout(() => {
           if (config.events?.onReady) {
@@ -216,16 +220,17 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should handle player errors gracefully", async () => {
     // Mock player to trigger error
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        setTimeout(() => {
-          if (config.events?.onError) {
-            config.events.onError()
-          }
-        }, 50)
-        return mockYTPlayer
-      })
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      setTimeout(() => {
+        if (config.events?.onError) {
+          config.events.onError()
+        }
+      }, 50)
+      return mockYTPlayer
+    })
 
     const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -252,7 +257,7 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should timeout after 10 seconds", async () => {
     // Mock player that never calls onReady (simulates network/API issues)
-    mockYTAPI.Player = vi.fn().mockImplementation(() => {
+    mockYTAPI.Player = vi.fn().mockImplementation(function () {
       // Return player but never trigger onReady
       return {
         getDuration: vi.fn(() => 195),
@@ -270,7 +275,7 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should handle player construction errors", async () => {
     // Mock YT.Player constructor to throw
-    mockYTAPI.Player = vi.fn().mockImplementation(() => {
+    mockYTAPI.Player = vi.fn().mockImplementation(function () {
       throw new Error("Player construction failed")
     })
 
@@ -296,16 +301,17 @@ describe("getYoutubeVideoDuration", () => {
       destroy: vi.fn(),
     }
 
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        setTimeout(() => {
-          if (config.events?.onReady) {
-            config.events.onReady({ target: mockPlayerWithErrors })
-          }
-        }, 50)
-        return mockPlayerWithErrors
-      })
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      setTimeout(() => {
+        if (config.events?.onReady) {
+          config.events.onReady({ target: mockPlayerWithErrors })
+        }
+      }, 50)
+      return mockPlayerWithErrors
+    })
 
     const duration = await getYoutubeVideoDuration(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -341,16 +347,17 @@ describe("getYoutubeVideoDuration", () => {
       destroy: "not-a-function", // Invalid destroy method
     }
 
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        setTimeout(() => {
-          if (config.events?.onReady) {
-            config.events.onReady({ target: mockPlayerWithBadDestroy })
-          }
-        }, 50)
-        return mockPlayerWithBadDestroy
-      })
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      setTimeout(() => {
+        if (config.events?.onReady) {
+          config.events.onReady({ target: mockPlayerWithBadDestroy })
+        }
+      }, 50)
+      return mockPlayerWithBadDestroy
+    })
 
     // Should not throw error during cleanup and should still return duration
     const duration = await getYoutubeVideoDuration(
@@ -362,27 +369,28 @@ describe("getYoutubeVideoDuration", () => {
 
   it("should generate unique iframe IDs for concurrent calls", async () => {
     let createdPlayerCount = 0
-    mockYTAPI.Player = vi
-      .fn()
-      .mockImplementation((_elementId: string, config: any) => {
-        const playerIndex = createdPlayerCount++
-        const player = {
-          getDuration: vi.fn(() => 195),
-          destroy: vi.fn(),
-        }
+    mockYTAPI.Player = vi.fn().mockImplementation(function (
+      _elementId: string,
+      config: any,
+    ) {
+      const playerIndex = createdPlayerCount++
+      const player = {
+        getDuration: vi.fn(() => 195),
+        destroy: vi.fn(),
+      }
 
-        // Stagger the onReady calls slightly to simulate real-world timing
-        setTimeout(
-          () => {
-            if (config.events?.onReady) {
-              config.events.onReady({ target: player })
-            }
-          },
-          50 + playerIndex * 25,
-        )
+      // Stagger the onReady calls slightly to simulate real-world timing
+      setTimeout(
+        () => {
+          if (config.events?.onReady) {
+            config.events.onReady({ target: player })
+          }
+        },
+        50 + playerIndex * 25,
+      )
 
-        return player
-      })
+      return player
+    })
 
     // Make multiple concurrent calls
     const promises = [
