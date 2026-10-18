@@ -43,7 +43,11 @@ camelCase('hello world');  // → "helloWorld"
 camelCase('hello-world');  // → "helloWorld"
 camelCase('hello_world');  // → "helloWorld"
 camelCase('HelloWorld');   // → "helloWorld"
+camelCase('helloWorld');   // → "helloWorld"
+camelCase('João Pessoa');  // → "joaoPessoa"
 ```
+
+Accents are stripped (`ã` → `a`) and existing camelCase boundaries are kept as word breaks.
 
 ### `kebabCase(str)`
 
@@ -53,6 +57,7 @@ Converts any string to kebab-case.
 kebabCase('Hello World');  // → "hello-world"
 kebabCase('helloWorld');   // → "hello-world"
 kebabCase('hello_world');  // → "hello-world"
+kebabCase('João Pessoa');  // → "joao-pessoa"
 ```
 
 ### `snakeCase(str)`
@@ -63,6 +68,7 @@ Converts any string to snake_case.
 snakeCase('Hello World');  // → "hello_world"
 snakeCase('helloWorld');   // → "hello_world"
 snakeCase('hello-world');  // → "hello_world"
+snakeCase('João Pessoa');  // → "joao_pessoa"
 ```
 
 ### `toSentenceCase(str)`
@@ -90,17 +96,18 @@ slugify('  Multiple   Spaces '); // → "multiple-spaces"
 
 ### `truncate(str, length, suffix?)`
 
-Truncates a string to `length` visible characters and appends `suffix` (default `"..."`).
+Truncates a string to at most `length` characters, suffix included, appending `suffix` (default `"..."`). When `length` is shorter than the suffix, the suffix itself is cut to fit (`length` `0` returns `""`). Throws if `length` is negative, `NaN`, or infinite.
 
 ```typescript
 truncate('Hello world', 5);          // → "He..."
 truncate('Hello world', 5, '…');     // → "He…"
 truncate('Hi', 10);                  // → "Hi"  (no truncation needed)
+truncate('Hello world', 2);          // → ".."  (never exceeds length)
 ```
 
 ### `removeHtmlTags(input)`
 
-Strips all HTML tags from a string.
+Strips all HTML tags from a string in linear time. Only `<` followed by a letter, `/`, `!`, `?` or `>` starts a tag, so prose like `a < b and c > d` is left alone. Input longer than 100,000 characters is truncated to that length before stripping. A `<` left over from nested input (`<<b>x>`) is dropped so no tag is reassembled. It strips text; it is not an HTML sanitizer.
 
 ```typescript
 removeHtmlTags('<p>Hello <strong>world</strong></p>'); // → "Hello world"
@@ -118,6 +125,8 @@ markdownToText('```js\nconsole.log("hi")\n```'); // → 'console.log("hi")'
 markdownToText('> A blockquote');              // → "A blockquote"
 ```
 
+Intraword underscores (`my_variable_name`) are preserved; `_`/`__` only count as emphasis at word boundaries.
+
 Handles: headings, bold/italic, code blocks, inline code, links, images, HTML tags, blockquotes, lists, tables, footnotes, and horizontal rules.
 
 ---
@@ -126,7 +135,7 @@ Handles: headings, bold/italic, code blocks, inline code, links, images, HTML ta
 
 ### `formatSecondsToHMS(totalSeconds)`
 
-Formats a number of seconds into `HH:MM:SS` (or `MM:SS` if under an hour).
+Formats a number of seconds into `HH:MM:SS` (or `MM:SS` if under an hour). Negative and non-finite input (`NaN`, `±Infinity`) is treated as `0`.
 
 ```typescript
 formatSecondsToHMS(3661); // → "01:01:01"
@@ -137,7 +146,7 @@ formatSecondsToHMS(0);    // → "00:00"
 
 ### `formatSecondsToFragment(secs)`
 
-Converts seconds to a YouTube-style timestamp fragment (e.g. `1h2m3s`).
+Converts seconds to a YouTube-style timestamp fragment (e.g. `1h2m3s`). Negative and non-finite input (`NaN`, `±Infinity`) is treated as `0`.
 
 ```typescript
 formatSecondsToFragment(3723); // → "1h2m3s"
@@ -161,13 +170,14 @@ formatHMSToSeconds('abc');     // → null
 
 ### `formatStringToTime(str)`
 
-Parses a digit-only string into `MM:SS` or `HH:MM:SS` format. Non-digit characters are stripped before formatting.
+Parses a digit-only string into `MM:SS` (up to 4 digits) or `HH:MM:SS` (5 or more digits, first 6 used). Non-digit characters are stripped and leading zeros are kept as typed.
 
 ```typescript
 formatStringToTime('123');   // → "01:23"
 formatStringToTime('1234');  // → "12:34"
 formatStringToTime('12345'); // → "01:23:45"
 formatStringToTime('0');     // → "00:00"
+formatStringToTime('000123'); // → "00:01:23"
 ```
 
 ---

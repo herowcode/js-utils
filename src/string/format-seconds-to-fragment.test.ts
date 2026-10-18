@@ -39,4 +39,10 @@ describe("formatSecondsToFragment", () => {
   it("handles large values", () => {
     expect(formatSecondsToFragment(86399)).toBe("23h59m59s")
   })
+
+  it("treats non-finite input as zero", () => {
+    expect(formatSecondsToFragment(Number.NaN)).toBe("0s")
+    expect(formatSecondsToFragment(Number.POSITIVE_INFINITY)).toBe("0s")
+    expect(formatSecondsToFragment(Number.NEGATIVE_INFINITY)).toBe("0s")
+  })
 })

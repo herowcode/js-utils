@@ -8,6 +8,9 @@ export function camelCase(str: string): string {
   }
 
   const words = str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
     .toLowerCase()
     .replace(/[^a-zA-Z0-9\s\-_]/g, "")
     .split(/[\s\-_]+/)

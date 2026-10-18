@@ -4,6 +4,7 @@ import { extractYouTubeId } from "./extract-youtube-video-id"
 import { getYoutubeThumbnail } from "./get-youtube-thumbnail"
 
 const successUrls = new Set<string>()
+let naturalWidth: number | undefined
 vi.mock("./extract-youtube-video-id", () => ({
   extractYouTubeId: vi.fn(),
 }))
@@ -13,12 +14,16 @@ describe("getYoutubeThumbnail", () => {
 
   beforeEach(() => {
     successUrls.clear()
+    naturalWidth = undefined
 
     // @ts-expect-error - override global Image for the test runtime
     globalThis.Image = class {
       onload?: () => void
       onerror?: () => void
       private _src = ""
+      get naturalWidth() {
+        return naturalWidth
+      }
       set src(v: string) {
         this._src = v
         // Call onload if URL is marked successful, otherwise call onerror.
@@ -70,6 +75,15 @@ describe("getYoutubeThumbnail", () => {
   it("returns null when video id cannot be extracted", async () => {
     mockExtract.mockReturnValueOnce(null)
     const result = await getYoutubeThumbnail("not-a-video-url")
+    expect(result).toBeNull()
+  })
+
+  it("skips placeholder thumbnails served for missing images", async () => {
+    mockExtract.mockReturnValueOnce("jkl012")
+    successUrls.add("https://img.youtube.com/vi/jkl012/maxresdefault.jpg")
+    naturalWidth = 120
+
+    const result = await getYoutubeThumbnail("https://youtu.be/jkl012")
     expect(result).toBeNull()
   })
 })

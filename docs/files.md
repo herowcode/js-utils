@@ -4,11 +4,13 @@ File utilities with conditional browser/Node.js exports. Bundlers and Node.js re
 
 ```typescript
 // Browser environment — gets browser-specific functions
-import { compressImage, downloadUrl, formatBytes, getYoutubeThumbnail } from '@herowcode/utils/files';
+import { compressImage, downloadUrl, formatBytes } from '@herowcode/utils/files';
 
 // Node.js environment — gets server-specific functions
 import { fileExists, fileDelete, formatBytes } from '@herowcode/utils/files';
 ```
+
+Both entries export the same names. A function that does not exist in the current runtime throws (or rejects, for async ones) instead of silently doing nothing, e.g. `@herowcode/utils/files: fileExists is not supported in the browser`. This applies to `compressImage` and `downloadUrl` in Node.js and to `fileExists` and `fileDelete` in the browser.
 
 ---
 
@@ -16,7 +18,7 @@ import { fileExists, fileDelete, formatBytes } from '@herowcode/utils/files';
 
 ### `compressImage(options)`
 
-Compresses an image file to WebP format using an offscreen canvas, with optional resizing.
+Compresses an image file to WebP format using an offscreen canvas, with optional resizing. Returns a promise that rejects on an unsupported type, a read/decode failure, or a canvas error. The image is scaled down proportionally so that both `maxWidth` and `maxHeight` hold; it is never upscaled.
 
 ```typescript
 const compressed = await compressImage({
@@ -38,7 +40,7 @@ console.log(compressed.size); // smaller than original
 | `maxWidth` | `number` | Maximum output width in pixels |
 | `maxHeight` | `number` | Maximum output height in pixels |
 | `quality` | `number` | WebP compression quality (0–1) |
-| `allowedFileTypes` | `string[]` | MIME types to accept; throws if file type not listed |
+| `allowedFileTypes` | `string[]` | MIME types to accept; rejects if file type not listed |
 
 ---
 
@@ -50,6 +52,8 @@ Triggers a file download in the browser by creating a temporary `<a>` element.
 const success = await downloadUrl('https://example.com/report.pdf');
 // → true on success, false on failure
 ```
+
+Returns `false` (and logs the error) on a non-2xx response, a network error, or a URL whose last path segment has no file extension. The filename is the percent-decoded last path segment. The anchor is removed right away and the object URL is revoked about a second later, so the download isn't cancelled.
 
 ---
 
@@ -84,11 +88,11 @@ if (exists) {
 
 ### `fileDelete(filePath)`
 
-Deletes a file. Errors are caught and logged — useful for cleanup tasks where failures should not interrupt execution.
+Deletes a file with `fs.rm(path, { force: true })`. A missing file is not an error; any other failure (permissions, a directory, ...) is rethrown.
 
 ```typescript
 await fileDelete('/tmp/upload.png');
-// If the file doesn't exist or deletion fails, it logs and continues
+// Resolves if the file is already gone; rejects on other errors such as EACCES
 ```
 
 ---

@@ -57,9 +57,61 @@ describe("extractYouTubeId", () => {
     expect(extractYouTubeId("not a youtube url")).toBeNull()
   })
 
-  it("extracts id when youtube.com path's last segment is the id", () => {
+  it.each(["live", "v", "e"])("extracts id from /%s/<id> URLs", (prefix) => {
     expect(
-      extractYouTubeId("https://www.youtube.com/some/path/dQw4w9WgXcQ/"),
+      extractYouTubeId(`https://www.youtube.com/${prefix}/dQw4w9WgXcQ`),
     ).toBe("dQw4w9WgXcQ")
+  })
+
+  it.each([
+    "https://www.youtube.com/channel/UCabcdefghi",
+    "https://www.youtube.com/c/abcdefghijk",
+    "https://www.youtube.com/user/abcdefghijk",
+    "https://www.youtube.com/some/path/dQw4w9WgXcQ/",
+    "https://www.youtube.com/embed/videoseries?list=PL1234567890",
+    "https://www.youtube.com/embed/live_stream?channel=UC123",
+  ])("ignores 11-character segments outside video paths in %s", (url) => {
+    expect(extractYouTubeId(url)).toBeNull()
+  })
+
+  it.each([
+    "https://m.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    "https://WWW.YOUTUBE.COM/watch?v=dQw4w9WgXcQ",
+    "youtu.be/dQw4w9WgXcQ",
+    "m.youtube.com/watch?v=dQw4w9WgXcQ",
+  ])("accepts %s", (url) => {
+    expect(extractYouTubeId(url)).toBe("dQw4w9WgXcQ")
+  })
+
+  it.each([
+    "https://evilyoutube.com/watch?v=dQw4w9WgXcQ",
+    "https://youtube.com.evil.com/watch?v=dQw4w9WgXcQ",
+    "https://youtu.be.evil.com/dQw4w9WgXcQ",
+    "https://evil.com/watch?v=dQw4w9WgXcQ",
+    "https://evil.com/?next=youtube.com/embed/dQw4w9WgXcQ",
+    "evil.com/watch?v=dQw4w9WgXcQ",
+    "notyoutu.be/dQw4w9WgXcQ",
+  ])("rejects lookalike host %s", (url) => {
+    expect(extractYouTubeId(url)).toBeNull()
+  })
+
+  it.each([
+    "https://www.youtube.com/watch?v=short",
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQextra",
+    "https://www.youtube.com/watch?v=dQw4w9Wg<>Q",
+    "https://youtu.be/short",
+    "https://www.youtube.com/embed/x",
+  ])("rejects malformed id in %s", (url) => {
+    expect(extractYouTubeId(url)).toBeNull()
+  })
+
+  it("does not return path segments that are not ids", () => {
+    expect(extractYouTubeId("https://www.youtube.com/watch")).toBeNull()
+    expect(
+      extractYouTubeId("https://www.youtube.com/playlist?list=PL12345"),
+    ).toBeNull()
+    expect(extractYouTubeId("https://www.youtube.com/")).toBeNull()
   })
 })

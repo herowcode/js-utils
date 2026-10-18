@@ -1,7 +1,7 @@
 import { formatHMSToSeconds, formatSecondsToFragment } from "../string"
 import { extractYouTubeId } from "./extract-youtube-video-id"
 
-type TCreateYoutubeLinkOptions = {
+export type TCreateYoutubeLinkOptions = {
   videoURL: string
   // start / end can be seconds (number) or strings like "90", "01:30", "1:02:03"
   start?: number | string
@@ -114,12 +114,5 @@ export const generateYoutubeURL = (
     fragment = `#t=${formatSecondsToFragment(startSec)}`
   }
 
-  // For short links, people often prefer the short host and start as query or fragment.
-  if (short) {
-    // prefer fragment if requested, otherwise use search params (t)
-    return `${base}${qs}${fragment}`
-  }
-
-  // watch/embed links
   return `${base}${qs}${fragment}`
 }

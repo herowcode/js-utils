@@ -1,6 +1,6 @@
 /** convert seconds to "1h2m3s" or "42s" style for fragment */
 export const formatSecondsToFragment = (secs: number): string => {
-  const parsedSecs = Math.max(0, Math.floor(secs))
+  const parsedSecs = Number.isFinite(secs) ? Math.max(0, Math.floor(secs)) : 0
   const h = Math.floor(parsedSecs / 3600)
   const m = Math.floor((parsedSecs % 3600) / 60)
   const s = parsedSecs % 60

@@ -17,7 +17,7 @@ import {
 
 ## `extractYouTubeId(urlString)`
 
-Extracts the video ID from any YouTube URL format. Returns `null` for invalid or non-YouTube URLs.
+Extracts the video ID from any YouTube URL format. Only `youtube.com`, `youtube-nocookie.com`, `youtu.be` and their subdomains are accepted (`evilyoutube.com` and `youtube.com.evil.com` return `null`), and the ID must be 11 characters of `A-Z a-z 0-9 _ -`. Scheme-less input such as `youtu.be/dQw4w9WgXcQ` works. Path IDs are read only after `/embed/`, `/shorts/`, `/live/`, `/v/` and `/e/`, so `/channel/...` returns `null`.
 
 ```typescript
 extractYouTubeId('https://youtu.be/dQw4w9WgXcQ');                   // → "dQw4w9WgXcQ"
@@ -33,28 +33,28 @@ extractYouTubeId(null);                                              // → null
 
 ## `generateYoutubeURL(options)`
 
-Generates a YouTube URL in watch, embed, or short format with player parameters.
+Generates a YouTube URL in watch, embed, or short format with player parameters. Returns `null` when no valid video ID can be extracted. The `TCreateYoutubeLinkOptions` type is exported.
 
 ```typescript
 // Standard watch URL
-generateYoutubeURL({ videoURL: 'https://youtu.be/abc123' });
-// → "https://www.youtube.com/watch?v=abc123"
+generateYoutubeURL({ videoURL: 'https://youtu.be/dQw4w9WgXcQ' });
+// → "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 // Embed with autoplay and no related videos
-generateYoutubeURL({ videoURL: 'https://youtu.be/abc123', embed: true, autoplay: true, rel: false });
-// → "https://www.youtube.com/embed/abc123?autoplay=1&rel=0"
+generateYoutubeURL({ videoURL: 'https://youtu.be/dQw4w9WgXcQ', embed: true, autoplay: true, rel: false });
+// → "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0"
 
 // Short URL starting at a timestamp
-generateYoutubeURL({ videoURL: 'https://youtu.be/abc123', short: true, start: '1:30' });
-// → "https://youtu.be/abc123?t=90"
+generateYoutubeURL({ videoURL: 'https://youtu.be/dQw4w9WgXcQ', short: true, start: '1:30' });
+// → "https://youtu.be/dQw4w9WgXcQ?t=90"
 
 // Fragment-style timestamp
-generateYoutubeURL({ videoURL: 'https://youtu.be/abc123', start: '1:30', useFragment: true });
-// → "https://www.youtube.com/watch?v=abc123#t=1m30s"
+generateYoutubeURL({ videoURL: 'https://youtu.be/dQw4w9WgXcQ', start: '1:30', useFragment: true });
+// → "https://www.youtube.com/watch?v=dQw4w9WgXcQ#t=1m30s"
 
 // Custom start/end times (in seconds)
-generateYoutubeURL({ videoURL: 'https://youtu.be/abc123', start: 90, end: 180 });
-// → "https://www.youtube.com/watch?v=abc123&start=90&end=180"
+generateYoutubeURL({ videoURL: 'https://youtu.be/dQw4w9WgXcQ', start: 90, end: 180 });
+// → "https://www.youtube.com/watch?v=dQw4w9WgXcQ&start=90&end=180"
 ```
 
 ### All options
@@ -109,7 +109,7 @@ All sources run in parallel via `Promise.allSettled`. Each field uses the first 
 
 The InnerTube endpoint is used first because it works reliably from datacenter/containerized environments where YouTube serves a consent page to the regular watch URL. If one source returns partial data, another may fill the gaps (e.g. InnerTube provides `description`/`lengthSeconds` while oEmbed contributes an additional thumbnail size).
 
-Concurrent calls for the same video ID share a single in-flight request. Failed requests are evicted from cache so the next call retries. Returns `null` only if **all** sources fail.
+Concurrent calls for the same video ID share a single in-flight request. Failed requests are evicted from cache so the next call retries. Each request aborts after 8 seconds. Every call returns its own copy of the result, so mutating it does not affect the cache. Returns `null` only if **all** sources fail.
 
 ### Return type
 
@@ -145,19 +145,19 @@ Attempts to load thumbnail images in quality order and returns the first URL tha
 ```typescript
 const thumb = await getYoutubeThumbnail('https://youtu.be/dQw4w9WgXcQ');
 // → "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
-//   (or hqdefault / mqdefault / default as fallback)
+//   (or hqdefault / mqdefault as fallback)
 //   or null if none load
 ```
 
-Priority order: `maxresdefault` → `hqdefault` → `mqdefault` → `default`
+Priority order: `maxresdefault` → `hqdefault` → `mqdefault`. YouTube answers a missing thumbnail with a 120x90 placeholder image, so images 120px wide or less count as missing (this is also why `default.jpg`, which is 120px, is not probed). Each probe times out after 5 seconds.
 
-> Browser only — uses `Image` load/error events to probe availability without CORS issues.
+> Browser only — uses `Image` load/error events to probe availability without CORS issues. In Node.js the `/youtube` entry's `getYoutubeThumbnail` throws (rejects) because there is no `Image`.
 
 ---
 
 ## `validateYoutubeLink(videoUrl)`
 
-Checks whether a YouTube video is publicly available by probing thumbnails and falling back to oEmbed.
+Checks whether a YouTube video is publicly available by probing thumbnails and falling back to oEmbed. The oEmbed fallback treats `401` (embedding disabled) as valid and `404` as invalid.
 
 ```typescript
 const isValid = await validateYoutubeLink('https://youtu.be/dQw4w9WgXcQ');
@@ -180,7 +180,7 @@ const duration = await getYoutubeVideoDuration('https://youtu.be/dQw4w9WgXcQ');
 // → "03:32"  or  null on failure
 ```
 
-Automatically loads the YouTube IFrame API if not already present. Creates an offscreen iframe, waits for the player to report its duration, then cleans up. Times out after 10 seconds.
+Automatically loads the YouTube IFrame API if not already present. Creates an offscreen iframe, waits for the player to report its duration, then cleans up. Resolves `null` if the IFrame API fails to load (script error or 10 second timeout) or the player does not report a duration within 10 seconds. In Node.js this function throws (rejects).
 
 ---
 

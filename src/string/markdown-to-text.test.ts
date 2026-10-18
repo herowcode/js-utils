@@ -62,4 +62,29 @@ describe("markdownToText", () => {
     const out = markdownToText(input)
     expect(out).toBe("a\n\nb")
   })
+
+  it("keeps intraword underscores", () => {
+    expect(markdownToText("my_variable_name and snake_case_here")).toBe(
+      "my_variable_name and snake_case_here",
+    )
+    expect(markdownToText("my__var__name")).toBe("my__var__name")
+  })
+
+  it("still strips underscore emphasis at word boundaries", () => {
+    expect(markdownToText("_italic_ and __bold__ words")).toBe(
+      "italic and bold words",
+    )
+  })
+
+  it("runs in linear time on many newlines", () => {
+    for (const input of [
+      "\n".repeat(50000),
+      `a${"\n".repeat(50000)}[x]: y`,
+      `|${"\n".repeat(50000)}-`,
+    ]) {
+      const start = performance.now()
+      markdownToText(input)
+      expect(performance.now() - start).toBeLessThan(500)
+    }
+  })
 })

@@ -33,8 +33,18 @@ formatDate(new Date(), 'en-US', { month: 'short', day: 'numeric', year: 'numeric
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `date` | `Date \| string \| number` | The date to format |
-| `locale` | `string` | BCP 47 locale tag (e.g. `"en-US"`, `"pt-BR"`) |
+| `locale` | `string \| Intl.Locale` | BCP 47 locale tag (e.g. `"en-US"`, `"pt-BR"`) or an `Intl.Locale` |
 | `opts` | `Intl.DateTimeFormatOptions` | Standard Intl formatting options |
+
+A string that is a dayjs token (e.g. `"MM"`, `"DD"`, `"YYYY"`) or is not a valid locale tag (e.g. `"DD/MM/YYYY"`) is used as a dayjs format instead of a locale.
+
+---
+
+## `withDayjsGlobalIntl(config, callback)`
+
+Runs `callback` with a temporary global Intl configuration (also see `setDayjsGlobalIntl`, `getDayjsGlobalIntl`, `resetDayjsGlobalIntl`).
+
+> **Warning:** the previous configuration is restored as soon as `callback` returns. It is not safe for async callbacks (anything after the first `await` runs with the original config) or for concurrent SSR requests, because the configuration is process-wide. Pass the locale and options explicitly to `formatDate` / `formatIntl` in those cases.
 
 ---
 
@@ -67,6 +77,8 @@ const result = parseTimeSpent('2020-01-01', '2022-04-16', 'en-US');
 // result.days      → 15
 // result.formatted → "2 years, 3 months, and 15 days"
 ```
+
+`locale` is matched exactly first, then by language (`"en"`, `"en-GB"` and `"en_GB"` use `en-US`). Unsupported locales fall back to `pt-BR`. Throws a `RangeError` when either date is invalid.
 
 ### Options
 

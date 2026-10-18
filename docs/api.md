@@ -35,10 +35,10 @@ await client.delete('/users/1');
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `baseURL` | `string` | Base URL prepended to all requests |
-| `getAccessToken` | `() => Promise<string \| null>` | Called before every request; result injected as `Authorization: Bearer` |
-| `onSignoutUnauthorized` | `() => void` | Called on 401 responses (except `/sign-in` paths) |
-| `getUserIP` | `() => Promise<string \| null>` | Called before every request; result injected as `x-forwarded-for` |
+| `baseURL` | `string` | Base URL prepended to relative endpoints. Required unless every endpoint is an absolute `http(s)` URL |
+| `getAccessToken` | `() => Promise<string \| null>` | Called before every request; result injected as `Authorization: Bearer`. Only sent when the request origin equals the `baseURL` origin |
+| `onSignoutUnauthorized` | `(body?: unknown) => void` | Called on 401 responses, except when the URL path contains `signin`, `sign-in` or `login`. Errors thrown by the callback are ignored |
+| `getUserIP` | `() => Promise<string \| undefined>` | Called before every request; result injected as `X-User-IP`. Only sent when the request origin equals the `baseURL` origin |
 
 ### Return type
 
@@ -60,13 +60,23 @@ interface IApiError {
 
 ### Retry behavior
 
-Requests are automatically retried on network failures and 5xx responses. The client uses exponential backoff and only retries idempotent methods (`GET`, `PUT`, `DELETE`, `PATCH`).
+By default `GET` and `HEAD` requests are retried on network errors and on status `408`, `429`, `500`, `502`, `503` and `504`, up to 5 attempts with exponential backoff (capped at 3000 ms). Aborted requests are never retried.
+
+Override per request with `retry: { limit, methods, statusCodes, backoffLimit }`. Provided fields are merged with the defaults, `methods` are matched case-insensitively, and `limit` is capped at 10 attempts. Network errors are retried only for the configured `methods`.
+
+### Cross-origin requests
+
+`Authorization` and `X-User-IP` are attached only when the request origin equals the `baseURL` origin. Absolute URLs pointing to another origin are sent without them. Only these injected headers are origin-scoped: cookies still follow `credentials` (default `"include"`), and headers you pass yourself go wherever the request goes. A relative `baseURL` such as `"/api"` resolves against the page origin, and without `baseURL` the page origin is used; in Node, a missing or relative `baseURL` means no credentials are attached. `onSignoutUnauthorized` only fires for 401s from that same origin.
+
+### Invalid JSON responses
+
+If a successful response body is not valid JSON, the call fails with an `Error` whose message includes the status, URL and a truncated snippet of the body.
 
 ---
 
 ## `apiWrapper<T>(fn, defaultData?)`
 
-Wraps any async function that may throw and returns `{ data, error }`. Handles `Response`, `AxiosError`, and `Error` objects.
+Wraps any async function that may throw and returns `{ data, error }`. Handles `Response`, Axios-style errors (any object with `isAxiosError: true`; axios itself is not a dependency), and `Error` objects. When a `Response` body is not JSON, a truncated copy of the text is used as `message` and `details`.
 
 ```typescript
 const { data, error } = await apiWrapper(

@@ -13,17 +13,19 @@ const LEVEL_ORDER: Record<TLogLevel, number> = {
   error: 40,
 }
 
+function isLevel(value: string | null | undefined): value is TLogLevel {
+  return typeof value === "string" && Object.hasOwn(LEVEL_ORDER, value)
+}
+
 function readEnvLevel(): TLogLevel | undefined {
   if (typeof globalThis !== "undefined") {
     const ls = (globalThis as { localStorage?: Storage }).localStorage
     const fromStorage = ls?.getItem?.("LOG_LEVEL")
-    if (fromStorage && fromStorage in LEVEL_ORDER) {
-      return fromStorage as TLogLevel
-    }
+    if (isLevel(fromStorage)) return fromStorage
   }
   const envLevel =
     typeof process !== "undefined" ? process.env?.LOG_LEVEL : undefined
-  if (envLevel && envLevel in LEVEL_ORDER) return envLevel as TLogLevel
+  if (isLevel(envLevel)) return envLevel
   return undefined
 }
 
@@ -81,12 +83,12 @@ function emit(
 
   if (isProduction()) {
     const payload = {
+      ...merged,
       time: new Date().toISOString(),
       level,
       service: state.service,
       env: process.env.NODE_ENV,
       msg,
-      ...merged,
     }
     console.log(JSON.stringify(payload))
     return

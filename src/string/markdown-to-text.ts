@@ -27,15 +27,18 @@ export function markdownToText(markdown: string): string {
 
   // Remove reference definitions like: [id]: url (and footnote defs like [^1]: note)
   // Remove the entire definition line including its trailing newline to avoid leaving blank lines
-  text = text.replace(/^\s*\[[^\]]+\]:\s*.*(?:\r\n?|\n)?/gm, "")
-  text = text.replace(/^\s*\[\^[^\]]+\]:\s*.*(?:\r\n?|\n)?/gm, "")
+  text = text.replace(/^[ \t]*\[[^\]]+\]:[ \t]*.*(?:\r\n?|\n)?/gm, "")
+  text = text.replace(/^[ \t]*\[\^[^\]]+\]:[ \t]*.*(?:\r\n?|\n)?/gm, "")
 
   // Remove HTML tags but keep inner text
   text = text.replace(/<\/?[^>]+>/g, "")
 
   // Remove emphasis markers (bold/italic/strikethrough), preserve text
-  text = text.replace(/(\*\*|__)(.*?)\1/g, "$2")
-  text = text.replace(/(\*|_)(.*?)\1/g, "$2")
+  // Underscore emphasis needs word boundaries so snake_case identifiers survive
+  text = text.replace(/\*\*(.*?)\*\*/g, "$1")
+  text = text.replace(/(?<![\p{L}\p{N}_])__(.*?)__(?![\p{L}\p{N}_])/gu, "$1")
+  text = text.replace(/\*(.*?)\*/g, "$1")
+  text = text.replace(/(?<![\p{L}\p{N}_])_(.*?)_(?![\p{L}\p{N}_])/gu, "$1")
   text = text.replace(/~~(.*?)~~/g, "$1")
 
   // Remove headings (#, ##, etc.)
@@ -50,7 +53,10 @@ export function markdownToText(markdown: string): string {
   // Remove table separator lines and keep table cell content by replacing pipes with spaced pipes
   // Match the separator line and any trailing newline so we don't leave an empty line behind
   // Remove separator lines entirely (don't insert an extra newline)
-  text = text.replace(/^\s*\|?(?:\s*:?-+:?\s*\|)+\s*(?:\r\n?|\n)?/gm, "")
+  text = text.replace(
+    /^[ \t]*\|?(?:[ \t]*:?-+:?[ \t]*\|)+[ \t]*(?:\r\n?|\n)?/gm,
+    "",
+  )
   text = text.replace(/\|/g, " | ")
 
   // Trim leading whitespace on each line (fixes leading space introduced by replacing pipes)

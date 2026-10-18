@@ -21,7 +21,7 @@ export default defineConfig({
   splitting: true,
   sourcemap: true,
   treeshake: true,
-  target: "es2018",
+  target: "es2022",
   platform: "neutral",
   external: [
     "node:fs",

@@ -1,0 +1,53 @@
+[
+  {
+    "name": "root (ESM)",
+    "path": "dist/index.js",
+    "limit": "2.5 kB"
+  },
+  {
+    "name": "/array",
+    "path": "dist/array/index.js",
+    "limit": "250 B"
+  },
+  {
+    "name": "/function",
+    "path": "dist/function/index.js",
+    "limit": "400 B"
+  },
+  {
+    "name": "/string",
+    "path": "dist/string/index.js",
+    "limit": "2 kB"
+  },
+  {
+    "name": "slugify from root",
+    "path": "dist/index.js",
+    "import": "{ slugify }",
+    "limit": "200 B"
+  },
+  {
+    "name": "/api",
+    "path": "dist/api/index.js",
+    "limit": "2.5 kB"
+  },
+  {
+    "name": "/date",
+    "path": "dist/date/index.js",
+    "limit": "11 kB"
+  },
+  {
+    "name": "/files (browser)",
+    "path": "dist/files/index.browser.js",
+    "limit": "1.2 kB"
+  },
+  {
+    "name": "/logger (browser)",
+    "path": "dist/logger/index.browser.js",
+    "limit": "1.2 kB"
+  },
+  {
+    "name": "/youtube (browser)",
+    "path": "dist/youtube/index.browser.js",
+    "limit": "5 kB"
+  }
+]

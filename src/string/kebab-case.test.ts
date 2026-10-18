@@ -84,4 +84,9 @@ describe("kebabCase", () => {
       "Input must be a string",
     )
   })
+
+  it("transliterates accented letters instead of deleting them", () => {
+    expect(kebabCase("João Pessoa")).toBe("joao-pessoa")
+    expect(kebabCase("ÁguaPotável")).toBe("agua-potavel")
+  })
 })

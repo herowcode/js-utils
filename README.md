@@ -58,12 +58,12 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 | Module | What it does | Docs |
 |--------|-------------|------|
 | `/api` | HTTP client with retry, auth tokens, and standardized errors | [docs/api.md](docs/api.md) |
-| `/array` | shuffle, unique, markdownToText | [docs/array.md](docs/array.md) |
+| `/array` | shuffle, unique | [docs/array.md](docs/array.md) |
 | `/date` | Format, relative time, timezone correction, time-spent parsing | [docs/date.md](docs/date.md) |
 | `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
 | `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
-| `/string` | Case conversion, slugify, truncate, time formatting | [docs/string.md](docs/string.md) |
+| `/string` | Case conversion, slugify, truncate, markdownToText, time formatting | [docs/string.md](docs/string.md) |
 | `/youtube` | Extract IDs, generate URLs, video info with caching | [docs/youtube.md](docs/youtube.md) |
 
 ---
@@ -78,11 +78,13 @@ pnpm add @herowcode/utils
 yarn add @herowcode/utils
 ```
 
-**Optional peer dependency:**
+Requires Node.js 22.12 or newer. Ships ESM and CommonJS.
+
+**Optional peer dependencies** (only for `/logger` on Node):
 
 ```bash
-# /logger pretty output in dev (Node only — JSON in prod always works)
-npm install -D pino-pretty
+npm install pino            # required by the Node logger
+npm install -D pino-pretty  # pretty output in dev; JSON in prod always works
 ```
 
 > A Python template covering the same contract is shipped in `templates/python/logger.py` — copy it into your Python services. See [docs/logger.md](docs/logger.md).
@@ -101,11 +103,13 @@ import { apiClient } from '@herowcode/utils/api';
 import { extractYouTubeId, getYoutubeVideoInfo } from '@herowcode/utils/youtube';
 ```
 
-Or import from the root entry (all modules bundled together):
+The root entry only re-exports the dependency-free modules (`array`, `function`, `string`):
 
 ```typescript
-import { formatDate, capitalize, debounce } from '@herowcode/utils';
+import { capitalize, debounce, shuffle } from '@herowcode/utils';
 ```
+
+`api`, `date`, `files`, `logger` and `youtube` are subpath-only. Upgrading from 1.x? See [CHANGELOG.md](CHANGELOG.md) for the 2.0 migration notes.
 
 ---
 
@@ -148,7 +152,10 @@ pnpm test             # Run tests in watch mode
 pnpm test:run         # Single test run
 pnpm test:coverage    # Coverage report (V8)
 pnpm build            # Compile CJS + ESM + declarations
-pnpm lint             # Biome check + tsc --noEmit
+pnpm check            # Biome check + tsc --noEmit (read-only)
+pnpm lint             # Same, but Biome rewrites files
+pnpm test:package     # publint + arethetypeswrong on the packed tarball
+pnpm size             # Bundle-size limits per entry
 ```
 
 Run a single test file:
@@ -158,6 +165,14 @@ pnpm vitest run src/string/capitalize.test.ts
 ```
 
 > **Note:** `package.json` exports are auto-generated on every build. Do not edit the `exports` field manually.
+
+### Releasing
+
+Releases use [Changesets](https://github.com/changesets/changesets):
+
+1. Run `pnpm changeset` in your PR and describe the change (patch/minor/major).
+2. After merge to `main`, the Release workflow opens a "chore: version packages" PR with the version bump and `CHANGELOG.md`.
+3. Merging that PR publishes to npm with provenance via npm trusted publishing (OIDC) — no npm token is stored in the repo.
 
 ---
 

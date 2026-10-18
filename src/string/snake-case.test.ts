@@ -84,4 +84,9 @@ describe("snakeCase", () => {
       "Input must be a string",
     )
   })
+
+  it("transliterates accented letters instead of deleting them", () => {
+    expect(snakeCase("João Pessoa")).toBe("joao_pessoa")
+    expect(snakeCase("ÁguaPotável")).toBe("agua_potavel")
+  })
 })

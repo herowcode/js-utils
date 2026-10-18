@@ -1,3 +1,5 @@
 export async function fileExists(_filePath: string): Promise<boolean> {
-  return false
+  throw new Error(
+    "@herowcode/utils/files: fileExists is not supported in the browser",
+  )
 }

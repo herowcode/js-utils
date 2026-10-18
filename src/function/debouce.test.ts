@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from "vitest"
 import { debounce } from "./debounce"
 
 describe("debounce", () => {
@@ -105,5 +113,13 @@ describe("debounce", () => {
     expect(() => debounce(mockFn, null as unknown as number)).toThrow(
       "Delay must be a non-negative number",
     )
+  })
+
+  it("preserves the parameter types of typed callbacks", () => {
+    const fn = debounce((x: number, label: string) => `${label}${x}`, 100)
+
+    expectTypeOf(fn).parameters.toEqualTypeOf<[number, string]>()
+    // @ts-expect-error wrong argument type
+    fn("1", "a")
   })
 })

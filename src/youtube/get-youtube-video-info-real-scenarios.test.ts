@@ -190,7 +190,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   it("deve processar corretamente um YouTube Shorts", async () => {
     const shortsResponse = {
       videoDetails: {
-        videoId: "abc123xyz",
+        videoId: "abc123xyz12",
         title: "Amazing Short Video #shorts",
         author: "Content Creator",
         lengthSeconds: "45",
@@ -204,7 +204,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/shorts/abc123xyz",
+      "https://www.youtube.com/shorts/abc123xyz12",
     )
 
     expect(info?.lengthSeconds).toBeLessThan(60)
@@ -217,7 +217,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   it("deve processar títulos em formato runs corretamente", async () => {
     const complexTitleResponse = {
       videoDetails: {
-        videoId: "test456",
+        videoId: "test4561234",
         author: "Channel Name",
       },
       microformat: {
@@ -247,7 +247,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=test456",
+      "https://www.youtube.com/watch?v=test4561234",
     )
 
     expect(info?.title).toBe("Video with Complex Title")
@@ -260,7 +260,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   it("deve usar thumbnails do microformat quando videoDetails não tem", async () => {
     const noVideoDetailsThumbnailResponse = {
       videoDetails: {
-        videoId: "test789",
+        videoId: "test7891234",
         title: "Video without thumbnail in details",
         author: "Test Channel",
       },
@@ -270,12 +270,12 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
           thumbnail: {
             thumbnails: [
               {
-                url: "https://i.ytimg.com/vi/test789/sddefault.jpg",
+                url: "https://i.ytimg.com/vi/test7891234/sddefault.jpg",
                 width: 640,
                 height: 480,
               },
               {
-                url: "https://i.ytimg.com/vi/test789/maxresdefault.jpg",
+                url: "https://i.ytimg.com/vi/test7891234/maxresdefault.jpg",
                 width: 1280,
                 height: 720,
               },
@@ -291,7 +291,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=test789",
+      "https://www.youtube.com/watch?v=test7891234",
     )
 
     expect(info?.thumbnails.length).toBeGreaterThanOrEqual(2)
@@ -304,7 +304,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   it("deve usar cache para requisições repetidas do mesmo vídeo", async () => {
     const cacheTestResponse = {
       videoDetails: {
-        videoId: "cache123",
+        videoId: "cache123456",
         title: "Cached Video",
         author: "Cache Channel",
         lengthSeconds: "180",
@@ -317,19 +317,19 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info1 = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=cache123",
+      "https://www.youtube.com/watch?v=cache123456",
     )
     const callsAfterFirst = fetchMock.mock.calls.length
 
-    const info2 = await getYoutubeVideoInfo("https://youtu.be/cache123")
+    const info2 = await getYoutubeVideoInfo("https://youtu.be/cache123456")
     const info3 = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=cache123&t=10s",
+      "https://www.youtube.com/watch?v=cache123456&t=10s",
     )
 
     expect(fetchMock.mock.calls.length).toBe(callsAfterFirst)
-    expect(info1?.id).toBe("cache123")
-    expect(info2?.id).toBe("cache123")
-    expect(info3?.id).toBe("cache123")
+    expect(info1?.id).toBe("cache123456")
+    expect(info2?.id).toBe("cache123456")
+    expect(info3?.id).toBe("cache123456")
   })
 
   /**
@@ -338,7 +338,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   it("deve usar watch page HTML quando InnerTube falha", async () => {
     const playerResponse = {
       videoDetails: {
-        videoId: "htmlonly",
+        videoId: "htmlonly123",
         title: "HTML only video",
         author: "HTML Channel",
         lengthSeconds: "100",
@@ -352,7 +352,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=htmlonly",
+      "https://www.youtube.com/watch?v=htmlonly123",
     )
 
     expect(info?.title).toBe("HTML only video")
@@ -365,7 +365,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
   it("deve mesclar dados complementares de múltiplas fontes", async () => {
     const innertubePartial = {
       videoDetails: {
-        videoId: "merge123",
+        videoId: "merge123456",
         title: "Main title",
         author: "Main channel",
         lengthSeconds: "500",
@@ -386,7 +386,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=merge123",
+      "https://www.youtube.com/watch?v=merge123456",
     )
 
     // Primary fields come from innertube
@@ -409,7 +409,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
       title: "Video from oEmbed",
       author_name: "oEmbed Channel",
       author_url: "https://www.youtube.com/@oembedchannel",
-      thumbnail_url: "https://i.ytimg.com/vi/oembed123/hqdefault.jpg",
+      thumbnail_url: "https://i.ytimg.com/vi/oembed12345/hqdefault.jpg",
       thumbnail_width: 480,
       thumbnail_height: 360,
     }
@@ -420,14 +420,14 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=oembed123",
+      "https://www.youtube.com/watch?v=oembed12345",
     )
 
     expect(info?.title).toBe("Video from oEmbed")
     expect(info?.channelTitle).toBe("oEmbed Channel")
     expect(info?.channelUrl).toBe("https://www.youtube.com/@oembedchannel")
     expect(info?.thumbnail).toBe(
-      "https://i.ytimg.com/vi/oembed123/hqdefault.jpg",
+      "https://i.ytimg.com/vi/oembed12345/hqdefault.jpg",
     )
   })
 
@@ -450,7 +450,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=noembed456",
+      "https://www.youtube.com/watch?v=noembed4567",
     )
 
     expect(info?.title).toBe("Video from NoEmbed")
@@ -467,7 +467,7 @@ describe("getYoutubeVideoInfo - Cenários Reais", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const info = await getYoutubeVideoInfo(
-      "https://www.youtube.com/watch?v=unavailable123",
+      "https://www.youtube.com/watch?v=unavail1234",
     )
 
     expect(info).toBeNull()

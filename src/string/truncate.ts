@@ -3,7 +3,7 @@ export function truncate(str: string, length: number, suffix = "..."): string {
     throw new Error("Input must be a string")
   }
 
-  if (typeof length !== "number" || length < 0) {
+  if (typeof length !== "number" || !Number.isFinite(length) || length < 0) {
     throw new Error("Length must be a non-negative number")
   }
 
@@ -11,9 +11,9 @@ export function truncate(str: string, length: number, suffix = "..."): string {
     return str
   }
 
-  if (length === 0) {
-    return suffix
+  if (length <= suffix.length) {
+    return suffix.slice(0, length)
   }
 
-  return str.slice(0, Math.max(0, length - suffix.length)) + suffix
+  return str.slice(0, length - suffix.length) + suffix
 }

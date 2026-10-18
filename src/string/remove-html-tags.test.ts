@@ -112,4 +112,58 @@ describe("removeHtmlTags", () => {
       "body { color: red; }Content",
     )
   })
+
+  it("keeps prose that uses < and > as comparison operators", () => {
+    expect(removeHtmlTags("a < b and c > d")).toBe("a < b and c > d")
+    expect(removeHtmlTags("1<2 and 3>2")).toBe("1<2 and 3>2")
+  })
+
+  it("keeps > inside quoted attribute values within a tag", () => {
+    expect(removeHtmlTags('<a title="a>b">x</a>')).toBe("x")
+  })
+
+  it("runs in linear time on pathological input", () => {
+    for (const input of [
+      "<".repeat(100000),
+      "<a".repeat(50000),
+      '<a "'.repeat(25000),
+    ]) {
+      const start = performance.now()
+      removeHtmlTags(input)
+      expect(performance.now() - start).toBeLessThan(200)
+    }
+  })
+
+  it("truncates input to 100000 characters before stripping", () => {
+    expect(removeHtmlTags(`${"a".repeat(100000)}<b>x</b>`)).toBe(
+      "a".repeat(100000),
+    )
+  })
+
+  it.each([
+    ["<<script>script>alert(1)</script>", "script>alert(1)"],
+    ["<<b>img src=x onerror=alert(1)>", "img src=x onerror=alert(1)>"],
+    ["<<<b>x>x>", "x>x>"],
+  ])("never reassembles a tag from nested '<' in %s", (input, expected) => {
+    expect(removeHtmlTags(input)).toBe(expected)
+  })
+
+  it.each([
+    "<<script>script>alert(1)</script>",
+    "<<b>img src=x onerror=alert(1)>",
+    "<<<b>x>x>",
+    "a < b and c > d",
+    "<p>Hello <b>world</b></p>",
+  ])("is idempotent for %s", (input) => {
+    const once = removeHtmlTags(input)
+    expect(removeHtmlTags(once)).toBe(once)
+  })
+
+  it("stays linear on deeply nested '<' input", () => {
+    const input = `${"<".repeat(20000)}${"b>".repeat(20000)}`
+    const start = performance.now()
+    const result = removeHtmlTags(input)
+    expect(performance.now() - start).toBeLessThan(200)
+    expect(result).not.toMatch(/<[A-Za-z/!?]/)
+  })
 })

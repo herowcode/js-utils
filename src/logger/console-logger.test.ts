@@ -134,3 +134,58 @@ describe("browser createLogger — dev mode", () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 })
+
+describe("browser createLogger — hardening", () => {
+  const OriginalLogLevel = process.env.LOG_LEVEL
+
+  afterEach(() => {
+    if (OriginalLogLevel === undefined) delete process.env.LOG_LEVEL
+    else process.env.LOG_LEVEL = OriginalLogLevel
+  })
+
+  it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])(
+    "ignores inherited-property LOG_LEVEL=%s",
+    (value) => {
+      process.env.NODE_ENV = "production"
+      process.env.LOG_LEVEL = value
+      const spy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+      const log = createLogger({ service: "smoke" })
+      log.debug("hidden")
+      log.info("shown")
+
+      expect(spy).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("honors a valid LOG_LEVEL", () => {
+    process.env.NODE_ENV = "production"
+    process.env.LOG_LEVEL = "error"
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+    const log = createLogger({ service: "smoke" })
+    log.info("hidden")
+    log.error("shown")
+
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not let context or bindings overwrite standard fields", () => {
+    process.env.NODE_ENV = "production"
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+    createLogger({
+      service: "smoke",
+      level: "info",
+      bindings: { service: "evil", msg: "evil" },
+    }).info("real_msg", { time: "x", level: "debug", env: "evil", a: 1 })
+
+    const payload = JSON.parse(spy.mock.calls[0][0] as string)
+    expect(payload.msg).toBe("real_msg")
+    expect(payload.level).toBe("info")
+    expect(payload.service).toBe("smoke")
+    expect(payload.env).toBe("production")
+    expect(payload.time).toMatch(/\dT\d/)
+    expect(payload.a).toBe(1)
+  })
+})
