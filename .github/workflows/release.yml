@@ -57,21 +57,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # PRs opened with GITHUB_TOKEN don't trigger ci.yml; the gate runs again in the publish job.
+      # PRs opened with GITHUB_TOKEN don't trigger ci.yml; the release gate job reruns the checks before publishing.
       - uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           commit-message: "chore: version packages"
           pr-title: "chore: version packages"
 
-  publish:
-    name: Publish to npm
+  gate:
+    name: Release gate
     needs: select
     if: needs.select.outputs.mode == 'publish'
     runs-on: ubuntu-latest
-    environment: npm
     permissions:
-      contents: write
-      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -79,7 +77,6 @@ jobs:
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      # Node 24 bundles npm >= 11.5.1, required for npm trusted publishing (OIDC).
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -99,6 +96,32 @@ jobs:
       - run: pnpm test:exports
 
       - run: pnpm test:package
+
+  # Tests and linters run in the read-only gate job; only build and publish see the OIDC token.
+  publish:
+    name: Publish to npm
+    needs: [select, gate]
+    if: needs.select.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      # Node 24 bundles npm >= 11.5.1, required for npm trusted publishing (OIDC). No cache: a poisoned cache must not reach the publish job.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
 
       - uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
