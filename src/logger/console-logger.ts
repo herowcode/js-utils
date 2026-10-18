@@ -23,16 +23,26 @@ function readEnvLevel(): TLogLevel | undefined {
     const fromStorage = ls?.getItem?.("LOG_LEVEL")
     if (isLevel(fromStorage)) return fromStorage
   }
-  const envLevel =
-    typeof process !== "undefined" ? process.env?.LOG_LEVEL : undefined
+  const envLevel = readEnv(() => process.env.LOG_LEVEL)
   if (isLevel(envLevel)) return envLevel
   return undefined
 }
 
+// Bundlers inline only the exact `process.env.NODE_ENV` text, so no typeof guard or `?.`
+function readEnv(read: () => string | undefined): string | undefined {
+  try {
+    return read()
+  } catch {
+    return undefined
+  }
+}
+
+function nodeEnv(): string | undefined {
+  return readEnv(() => process.env.NODE_ENV)
+}
+
 function isProduction(): boolean {
-  return (
-    typeof process !== "undefined" && process.env?.NODE_ENV === "production"
-  )
+  return nodeEnv() === "production"
 }
 
 function resolveLevel(opts: ICreateLoggerOptions): TLogLevel {
@@ -81,7 +91,7 @@ function emit(
       time: new Date().toISOString(),
       level,
       service: state.service,
-      env: process.env.NODE_ENV,
+      env: nodeEnv(),
       msg,
     }
     console.log(JSON.stringify(payload))
