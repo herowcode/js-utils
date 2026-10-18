@@ -62,7 +62,7 @@ Projetado, construído e mantido por [Judson Cairo](https://judsoncairo.com) com
 | `/date` | Formatação, tempo relativo, timezone, tempo gasto | [docs/date.md](../date.md) |
 | `/files` | Comprimir imagens, download de URLs, formatar bytes _(browser + Node)_ | [docs/files.md](../files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](../function.md) |
-| `/nextjs` | Componente OptimizedImage | [docs/nextjs.md](../nextjs.md) |
+| `/logger` | Logger estruturado (Pino no Node, baseado em console no browser) | [docs/logger.md](../logger.md) |
 | `/string` | Conversão de case, slugify, truncate, formatação de tempo | [docs/string.md](../string.md) |
 | `/youtube` | Extrair IDs, gerar URLs, informações de vídeo com cache | [docs/youtube.md](../youtube.md) |
 
@@ -78,11 +78,11 @@ pnpm add @herowcode/utils
 yarn add @herowcode/utils
 ```
 
-**Peer dependencies** (necessários apenas para módulos específicos):
+**Peer dependency opcional:**
 
 ```bash
-# /nextjs e React hook do /youtube
-npm install react next
+# /logger com saída formatada em dev (só Node — JSON em produção sempre funciona)
+npm install -D pino-pretty
 ```
 
 ---
