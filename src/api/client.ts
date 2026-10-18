@@ -71,9 +71,10 @@ async function beforeRequestHook(
 async function afterResponseHook(
   request: Request,
   response: Response,
+  sendCredentials: boolean,
   onSignoutUnauthorized?: (response: unknown) => void,
 ): Promise<void> {
-  if (response.status !== 401) return
+  if (response.status !== 401 || !sendCredentials) return
 
   const possibleSignInPaths = ["signin", "sign-in", "login"]
   const { pathname } = new URL(request.url)
@@ -93,10 +94,17 @@ async function afterResponseHook(
   }
 }
 
-function getOrigin(url?: string): string | undefined {
-  if (!url) return undefined
+// Relative URLs (and an unset baseURL) resolve against the page, as browsers do.
+function pageBase(): string | undefined {
+  const location = (
+    globalThis as { location?: { href?: string; origin?: string } }
+  ).location
+  return location?.href ?? location?.origin
+}
+
+function resolveUrl(url: string): URL | undefined {
   try {
-    return new URL(url).origin
+    return new URL(url, pageBase())
   } catch {
     return undefined
   }
@@ -205,14 +213,15 @@ async function api<T>(
     }
   }
 
-  // Create initial request
-  let request = new Request(url, { ...init, body })
+  const target = resolveUrl(url)
+  let request = new Request(target?.href ?? url, { ...init, body })
 
-  // Run pre-request hooks
-  const baseOrigin = getOrigin(config.baseURL)
+  const credentialOrigin = resolveUrl(config.baseURL ?? "")?.origin
+  const sendCredentials =
+    credentialOrigin !== undefined && credentialOrigin === target?.origin
   request = await beforeRequestHook(
     request,
-    baseOrigin !== undefined && baseOrigin === getOrigin(url),
+    sendCredentials,
     config.getAccessToken,
     config.getUserIP,
   )
@@ -221,7 +230,12 @@ async function api<T>(
   const response = await fetchWithRetry(request, options.retry)
 
   // Run post-response hooks
-  await afterResponseHook(request, response, config.onSignoutUnauthorized)
+  await afterResponseHook(
+    request,
+    response,
+    sendCredentials,
+    config.onSignoutUnauthorized,
+  )
 
   if (!response.ok) {
     throw response

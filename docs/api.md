@@ -38,7 +38,7 @@ await client.delete('/users/1');
 | `baseURL` | `string` | Base URL prepended to relative endpoints. Required unless every endpoint is an absolute `http(s)` URL |
 | `getAccessToken` | `() => Promise<string \| null>` | Called before every request; result injected as `Authorization: Bearer`. Only sent when the request origin equals the `baseURL` origin |
 | `onSignoutUnauthorized` | `(body?: unknown) => void` | Called on 401 responses, except when the URL path contains `signin`, `sign-in` or `login`. Errors thrown by the callback are ignored |
-| `getUserIP` | `() => Promise<string \| null>` | Called before every request; result injected as `X-User-IP`. Only sent when the request origin equals the `baseURL` origin |
+| `getUserIP` | `() => Promise<string \| undefined>` | Called before every request; result injected as `X-User-IP`. Only sent when the request origin equals the `baseURL` origin |
 
 ### Return type
 
@@ -66,7 +66,7 @@ Override per request with `retry: { limit, methods, statusCodes, backoffLimit }`
 
 ### Cross-origin requests
 
-`Authorization` and `X-User-IP` are attached only when the request origin equals the `baseURL` origin. Absolute URLs pointing to another origin are sent without them, so tokens are never leaked to third parties.
+`Authorization` and `X-User-IP` are attached only when the request origin equals the `baseURL` origin. Absolute URLs pointing to another origin are sent without them, so tokens are never leaked to third parties. A relative `baseURL` such as `"/api"` resolves against the page origin, and without `baseURL` the page origin is used; in Node, a missing or relative `baseURL` means no credentials are attached. `onSignoutUnauthorized` only fires for 401s from that same origin.
 
 ### Invalid JSON responses
 

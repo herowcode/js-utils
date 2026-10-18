@@ -787,6 +787,60 @@ describe("apiClient", () => {
       )
     })
 
+    it("should send Authorization with a relative baseURL resolved against the page", async () => {
+      const client = apiClient({
+        baseURL: "/api",
+        getAccessToken: vi.fn().mockResolvedValue("secret"),
+      })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("/users")
+
+      const request = getRequestFromFetchMock()
+      expect(request.url).toBe("http://localhost:3000/api/users")
+      expect(request.headers.get("Authorization")).toBe("Bearer secret")
+    })
+
+    it("should treat the page origin as the credential origin when baseURL is unset", async () => {
+      const client = apiClient({
+        getAccessToken: vi.fn().mockResolvedValue("secret"),
+      })
+      mockFetch.mockResolvedValue(createMockResponse(200, {}))
+
+      await client.get("http://localhost:3000/me")
+      await client.get("https://other.com/data")
+
+      expect(getRequestFromFetchMock(0).headers.get("Authorization")).toBe(
+        "Bearer secret",
+      )
+      expect(getRequestFromFetchMock(1).headers.get("Authorization")).toBeNull()
+    })
+
+    it("should not send credentials when the port differs from baseURL", async () => {
+      const client = apiClient({
+        baseURL: "https://api.example.com",
+        getAccessToken: vi.fn().mockResolvedValue("secret"),
+      })
+      mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
+
+      await client.get("https://api.example.com:8443/data")
+
+      expect(getRequestFromFetchMock().headers.get("Authorization")).toBeNull()
+    })
+
+    it("should not call onSignoutUnauthorized for a 401 from another origin", async () => {
+      const onSignoutUnauthorized = vi.fn()
+      const client = apiClient({
+        baseURL: "https://api.example.com",
+        onSignoutUnauthorized,
+      })
+      mockFetch.mockResolvedValueOnce(createMockResponse(401, {}))
+
+      await client.get("https://third-party.com/data")
+
+      expect(onSignoutUnauthorized).not.toHaveBeenCalled()
+    })
+
     it("should preserve Headers instances passed by the caller", async () => {
       const client = apiClient({ baseURL: "https://api.example.com" })
       mockFetch.mockResolvedValueOnce(createMockResponse(200, {}))
