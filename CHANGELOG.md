@@ -1,5 +1,277 @@
 # @herowcode/utils
 
+## 2.2.0
+
+### Minor Changes
+
+- 9ddf221: `/api`: export `buildQueryString(params)`, the helper `apiClient` uses for `params`, and accept array values (repeated keys). Output for scalar values is unchanged, but JS callers that passed an array before now get repeated keys (`tag=a&tag=b`) instead of the old `tag=a,b`.
+  
+  ```ts
+  import { buildQueryString } from "@herowcode/utils/api"
+  
+  buildQueryString({ page: 1, tag: ["a", "b"] }) // "?page=1&tag=a&tag=b"
+  ```
+- 9ddf221: `/api` adds `getOffset(page, pageSize)` and `buildPageMeta({ page, pageSize, total })` for paginated list endpoints. Invalid numbers are clamped instead of producing `NaN`.
+  
+  ```ts
+  import { buildPageMeta, getOffset } from "@herowcode/utils/api"
+  
+  getOffset(3, 20) // 40
+  buildPageMeta({ page: 2, pageSize: 10, total: 25 }).hasNext // true
+  ```
+- 9ddf221: `IApiError.retryAfterSeconds` is set by `apiWrapper` from a `Retry-After` header on the thrown `Response`; the rest of the error shape is unchanged.
+  
+  ```ts
+  import { apiWrapper } from "@herowcode/utils/api"
+  
+  const { error } = await apiWrapper(() => callApi())
+  error?.retryAfterSeconds // 30
+  ```
+- 9ddf221: `/array` adds `chunk`, `sumBy`, `groupBy` and `keyBy` (also exported from the package root). `groupBy` and `keyBy` are safe against `__proto__` keys and do not need `Object.groupBy`.
+  
+  ```ts
+  import { chunk, groupBy } from "@herowcode/utils/array"
+  
+  chunk([1, 2, 3], 2) // [[1, 2], [3]]
+  groupBy([1, 2, 3], (n) => (n % 2 ? "odd" : "even")) // { odd: [1, 3], even: [2] }
+  ```
+- 9ddf221: `/async` adds `createSingleFlight(fn)`: concurrent calls share one in-flight promise, the slot is cleared on settle (before waiters resume, on success and on failure), and the next call starts a fresh run.
+  
+  ```ts
+  import { createSingleFlight } from "@herowcode/utils/async"
+  
+  const refreshToken = createSingleFlight(() => api.refresh())
+  await Promise.all([refreshToken(), refreshToken()]) // one refresh call
+  ```
+- 9ddf221: New `/async` subpath (universal): `sleep`, `withTimeout(signal, timeoutMs)` (native `AbortSignal.any`/`timeout` with a manual fallback), `backoffDelay`, `parseRetryAfterMs`, `retry`, `mapInChunks` and `createConcurrencyLimiter`. `retry` only retries transient errors by default, never retries `AbortError`, and lets `Retry-After` / `retryAfterSeconds` override the backoff. The `/api` client now uses these helpers internally with unchanged behavior.
+  
+  ```ts
+  import { retry } from "@herowcode/utils/async"
+  
+  const user = await retry(() => loadUser(id), { attempts: 4 })
+  ```
+  
+  Migration note: a local `retry` that retried every error needs `shouldRetry: () => true` to keep that behavior.
+- 9ddf221: New `/auth` subpath (universal): `decodeJWT` (does NOT verify signatures; `null` when malformed), `getJWTExp`, `isJWTExpired`, `isJWTExpiring(token, { marginSeconds = 30 })` and `extractBearerToken`. Expiry checks fail closed and margins are in seconds.
+  
+  ```ts
+  import { isJWTExpiring } from "@herowcode/utils/auth"
+  
+  if (isJWTExpiring(token, { marginSeconds: 60 })) await refresh()
+  ```
+- 9ddf221: New `/br` subpath (universal) for Brazilian documents: `formatCEP`, `formatCPF`, `isValidCPF`, `formatCNPJ` and `isValidCNPJ`. Validators check the check digits and reject repeated digits; the CNPJ functions also accept the alphanumeric format. `format*` only checks the length and returns `fallback` (`""`) otherwise.
+  
+  ```ts
+  import { formatCPF, isValidCPF } from "@herowcode/utils/br"
+  
+  if (isValidCPF(input)) formatCPF(input) // "529.982.247-25"
+  ```
+- 9ddf221: New `/crypto` subpath (universal, WebCrypto only, no Node imports): `sha256Hex`, `hmacSha256Hex`, `safeEqual` (synchronous, constant-time), `generateOpaqueToken(bytes = 32)` returning `{ token, hash }` and `verifyHmacSignature(payload, signature, secret, { encoding, prefix })`. Everything except `safeEqual` returns a Promise, so always `await` (an un-awaited `verifyHmacSignature` is always truthy). Errors carry `HEROW_CRYPTO_UNAVAILABLE` or `HEROW_CRYPTO_INVALID_BYTES`.
+  
+  ```ts
+  import { verifyHmacSignature } from "@herowcode/utils/crypto"
+  
+  const ok = await verifyHmacSignature(rawBody, header, secret, { prefix: "sha256=" })
+  ```
+- 9ddf221: `formatDate` accepts `fallback` on its config-object form and returns it for an invalid date. Without it, an invalid date still throws `RangeError`.
+  
+  ```ts
+  import { formatDate } from "@herowcode/utils/date"
+  
+  formatDate("not a date", { format: "DD/MM/YYYY", fallback: "-" }) // "-"
+  ```
+- 9ddf221: `getRelativeTime(date, dateNow?, { style, calendar, locale, fallback })` can render through `Intl.RelativeTimeFormat` (default locale `pt-BR`). Without `style` or `calendar` the dayjs output is unchanged.
+  
+  ```ts
+  import { getRelativeTime } from "@herowcode/utils/date"
+  
+  getRelativeTime(yesterday, now, { calendar: true }) // "ontem"
+  getRelativeTime("garbage", now, { fallback: "-" }) // "-"
+  ```
+- 9ddf221: `/date`: add timezone-safe date-only helpers that use `Intl` only (importing them does not pull in dayjs): `toISODate`, `getTodayISODate`, `addDaysISO`, `diffDaysISO`, `parseISODateLocal`, `getZonedHour` and `getDatePartsInTimeZone`. `timeZone` defaults to the runtime zone; servers should pass it explicitly.
+  
+  ```ts
+  import { addDaysISO, toISODate } from "@herowcode/utils/date"
+  
+  toISODate(new Date("2026-01-02T01:30:00Z"), { timeZone: "America/Sao_Paulo" }) // "2026-01-01"
+  addDaysISO("2028-02-28", 1) // "2028-02-29"
+  ```
+- 9ddf221: New `/env` subpath (universal): `requireEnv(name, { minLength, env })`, `optionalEnv(name, fallback, { env })` and `parseBoolean(value, fallback)`. The source is injectable, so it works on runtimes without `process`. Errors carry `HEROW_ENV_MISSING`, `HEROW_ENV_NO_SOURCE` or `HEROW_PARSE_BOOLEAN_INVALID` codes, a fix hint and a link to `docs/errors.md`, and never include the value.
+  
+  ```ts
+  import { parseBoolean, requireEnv } from "@herowcode/utils/env"
+  
+  const url = requireEnv("DATABASE_URL")
+  const debug = parseBoolean(process.env.DEBUG, false)
+  ```
+- 9ddf221: `/errors` now ships the `HttpError` family: `HttpError(status, message?, { code, details, cause })` plus `BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `NotFoundError`, `ConflictError` and `TooManyRequestsError` (with `retryAfterSeconds`). Instances carry the brand `Symbol.for("@herowcode/utils.HttpError")`, so `instanceof` and the new `isHttpError()` guard work across the CJS and ESM builds. `getErrorStatus` reads `HttpError.status` and `retry` honours `retryAfterSeconds`.
+  
+  ```ts
+  import { isHttpError, NotFoundError } from "@herowcode/utils/errors"
+  
+  throw new NotFoundError("User not found")
+  if (isHttpError(err) && err.status === 404) return null
+  ```
+- 9ddf221: New `/errors` subpath (universal): `getErrorMessage(err, { fallback, keys })`, `getRootCause`, `getErrorStatus` (reads `status`, `statusCode`, `response.status` through the cause chain), `isTransientNetworkError(err, { includeTimeouts })` (looks through `cause`, so Node's `fetch failed` is classified by its cause code) and `isTransientStatus` with `TRANSIENT_STATUS_CODES`. The `/api` client builds its default `retry.statusCodes` from that list.
+  
+  ```ts
+  import { getErrorMessage, isTransientNetworkError } from "@herowcode/utils/errors"
+  
+  getErrorMessage({ error: { message: "Nope" } }) // "Nope"
+  isTransientNetworkError(new TypeError("fetch failed", { cause: { code: "ECONNRESET" } })) // true
+  ```
+- 9ddf221: `/files` adds `toCSV` (universal, RFC 4180, neutralizes spreadsheet formulas by default while keeping numbers and numeric strings untouched) and the browser helpers `copyToClipboard` and `downloadBlob` (they reject or throw in the Node entry like the other browser-only helpers). `downloadUrl` now reuses `downloadBlob`'s code with unchanged behavior.
+  
+  ```ts
+  import { downloadBlob, toCSV } from "@herowcode/utils/files"
+  
+  downloadBlob(new Blob([toCSV(rows, { bom: true })], { type: "text/csv" }), "report.csv")
+  ```
+  
+  Note: text cells starting with `=`, `+`, `-` or `@` (for example `"+55 11 99999-0000"`) get a leading `'`; pass `neutralizeFormulas: false` for trusted data.
+- 9ddf221: `formatBytes` accepts `{ decimals, base, locale }`; the default output is unchanged.
+  
+  ```ts
+  import { formatBytes } from "@herowcode/utils/files"
+  
+  formatBytes(1500, { base: 1000, decimals: 1 }) // "1.5 KB"
+  formatBytes(1536, { locale: "pt-BR" }) // "1,50 KB"
+  ```
+- 9ddf221: `/files` adds `safeStorage(kind?)`, a `localStorage`/`sessionStorage` wrapper that never throws: blocked storage, quota errors and SSR fall back to per-instance memory. `set` and `setJSON` return `false` when the value is only in memory. The Node.js entry exports a memory-only version.
+  
+  ```ts
+  import { safeStorage } from "@herowcode/utils/files"
+  
+  const prefs = safeStorage()
+  prefs.setJSON("prefs", { theme: "dark" }) // true when persisted
+  prefs.getJSON("prefs", { fallback: { theme: "light" } })
+  ```
+- 9ddf221: `debounce` returns a function with `cancel()` and `flush()`; it is still assignable to `(...args) => void`.
+  
+  ```ts
+  import { debounce } from "@herowcode/utils/function"
+  
+  const save = debounce(persist, 500)
+  save(draft)
+  save.flush() // runs persist(draft) now
+  ```
+- 9ddf221: `/function` adds `isBrowser`, `isServer` and `safeJsonParse(text, { fallback })` (also exported from the package root).
+  
+  ```ts
+  import { safeJsonParse } from "@herowcode/utils/function"
+  
+  safeJsonParse(localStorage.getItem("prefs"), { fallback: {} })
+  ```
+- 9ddf221: `throttle` accepts `{ leading, trailing }`, both `true` by default (the previous timing).
+  
+  ```ts
+  import { throttle } from "@herowcode/utils/function"
+  
+  const onScroll = throttle(update, 100, { trailing: false })
+  ```
+- 9ddf221: `/function` adds `tryCatchResult`, a discriminated `{ ok }` variant of `tryCatch`.
+  
+  ```ts
+  import { tryCatchResult } from "@herowcode/utils/function"
+  
+  const r = await tryCatchResult(() => fetchUser(id))
+  if (!r.ok) return report(r.error)
+  r.data // User
+  ```
+- 9ddf221: New `/http` subpath (universal, Web `Request`/`Response`): `corsHeaders(request, { origin, methods, headers, credentials, maxAge })` returning `Headers`, `preflight` (204 for `OPTIONS`, else `null`), `jsonResponse`, `fetchWithTimeout(input, init, { timeoutMs })` and `fetchJson`, which throws `HttpError` subclasses by status and `HEROW_INVALID_JSON` for a non-JSON 2xx body. `origin` is required and never reflected unchecked; `credentials: true` with `"*"` throws `HEROW_CORS_CREDENTIALS_WILDCARD`.
+  
+  ```ts
+  import { fetchJson, preflight } from "@herowcode/utils/http"
+  
+  const early = preflight(request, { origin: ["https://app.example.com"] })
+  if (early) return early
+  const user = await fetchJson<User>("/api/me", undefined, { timeoutMs: 5000 })
+  ```
+- 9ddf221: `/logger` adds `redactSecrets(text, { extraPatterns })` for free text (bearer tokens, JWTs, `key=value` secrets, common API-key prefixes) and `redactDeep(value, { keys, patterns, maxDepth })` for objects, both built on the logger's existing redaction core. Objects deeper than `maxDepth` (default 8) become `"[MaxDepth]"`.
+  
+  ```ts
+  import { redactDeep, redactSecrets } from "@herowcode/utils/logger"
+  
+  redactSecrets("Authorization: Bearer abc.def") // "Authorization: [REDACTED]"
+  redactDeep({ user: "ana", password: "x" }) // { user: "ana", password: "[REDACTED]" }
+  ```
+  
+  The browser `/logger` entry grows by about 0.5 kB.
+- 9ddf221: New `/number` subpath (universal): `formatCurrency` (BRL/pt-BR by default, `fromCents`, `stripZeroCents`, `compact`, `{ fallback }`), `formatNumber`, `formatPercent`, `percentOf`, `parseLocaleNumber` (returns `NaN` on garbage, `asCents`) and `toNumber`. Output comes from `Intl`, so pt-BR currency uses a non-breaking space after `R$`.
+  
+  ```ts
+  import { formatCurrency, parseLocaleNumber } from "@herowcode/utils/number"
+  
+  formatCurrency(123450, { fromCents: true }) // "R$ 1.234,50"
+  parseLocaleNumber("R$ 1.234,56") // 1234.56
+  ```
+- 9ddf221: New `/phone` subpath (universal) for BR and US numbers: `onlyDigits`, `normalizePhone` (E.164), `formatPhone`, `getBRMobileVariants` (with and without the 9th digit) and `buildWhatsAppLink`. Invalid numbers return the `fallback` option (`null` for `normalizePhone`, `""` for the formatters, `[]` for `getBRMobileVariants`).
+  
+  ```ts
+  import { buildWhatsAppLink, normalizePhone } from "@herowcode/utils/phone"
+  
+  normalizePhone("(11) 99999-9999") // "+5511999999999"
+  buildWhatsAppLink("11999999999", { message: "Olá!" })
+  ```
+- 9ddf221: `formatSecondsToHMS` accepts `{ alwaysShowHours, rounding }` and `formatSecondsToFragment` accepts `{ separator, rounding }`; the default output is unchanged.
+  
+  ```ts
+  import { formatSecondsToFragment, formatSecondsToHMS } from "@herowcode/utils/string"
+  
+  formatSecondsToHMS(65, { alwaysShowHours: true }) // "00:01:05"
+  formatSecondsToFragment(3723, { separator: " " }) // "1h 2m 3s"
+  ```
+- 9ddf221: `/string` adds `getInitials`, `escapeHtml`, `escapeRegExp` and `pluralize` (also exported from the package root). `docs/array.md` no longer lists `markdownToText`, which has always been exported from `/string`.
+  
+  ```ts
+  import { getInitials, pluralize } from "@herowcode/utils/string"
+  
+  getInitials("Maria da Silva") // "MS"
+  `${3} ${pluralize(3, "item")}` // "3 items"
+  ```
+- 9ddf221: `markdownToText` accepts `{ keepLinkUrls, singleLine }`; the default output is unchanged.
+  
+  ```ts
+  import { markdownToText } from "@herowcode/utils/string"
+  
+  markdownToText("[docs](https://x.dev)", { keepLinkUrls: true }) // "docs (https://x.dev)"
+  ```
+- 9ddf221: `/string`: add `removeAccents(text)` and `normalizeText(text)` (lowercase, no accents or punctuation, collapsed whitespace). `slugify` now builds on them with identical output.
+  
+  ```ts
+  import { normalizeText, removeAccents } from "@herowcode/utils/string"
+  
+  removeAccents("Crème Brûlée") // "Creme Brulee"
+  normalizeText("  Olá,   Mundo! ") // "ola mundo"
+  ```
+- 9ddf221: `removeHtmlTags` accepts `{ decodeEntities, collapseWhitespace }`; the default output is unchanged.
+  
+  ```ts
+  import { removeHtmlTags } from "@herowcode/utils/string"
+  
+  removeHtmlTags("<p>a &amp;  b</p>", { decodeEntities: true, collapseWhitespace: true }) // "a & b"
+  ```
+- 9ddf221: `slugify` accepts `{ separator, maxLength }`; the default output is unchanged.
+  
+  ```ts
+  import { slugify } from "@herowcode/utils/string"
+  
+  slugify("Olá Mundo", { separator: "_" }) // "ola_mundo"
+  slugify("hello brave world", { maxLength: 7 }) // "hello-b"
+  ```
+- 9ddf221: `truncate` accepts `{ suffix, wordBoundary }` as its third argument (a plain suffix string still works).
+  
+  ```ts
+  import { truncate } from "@herowcode/utils/string"
+  
+  truncate("hello brave world", 14, { wordBoundary: true }) // "hello brave..."
+  ```
+
+### Patch Changes
+
+- 9ddf221: Docs: new "Replacing a local copy" guide (English and pt-BR) mapping local helper patterns to imports, behavior differences and the bugs they fix, plus a generated A-Z helper index and an `http`/`api`/`async` comparison in the README. `pnpm test:exports` now fails when the index, the guide anchors or the `docs/errors.md` code sections drift.
+- 9ddf221: `HttpError` now rejects an invalid `status` (anything but an integer from 100 to 599) with a `RangeError` coded `HEROW_HTTP_INVALID_STATUS` and ignores a negative or non-finite `retryAfterSeconds`. `redactSecrets` also masks passwords in connection URLs (`postgres://user:[REDACTED]@host`) and handles escaped quotes inside quoted values. `sleep` and `withTimeout` clamp delays to the 32-bit timer limit. `tryCatchResult` now types `error` as `unknown` by default.
+
 ## 2.1.0
 
 ### Minor Changes
