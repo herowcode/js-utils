@@ -34,6 +34,13 @@ const expectedExports = {
     "isJWTExpired",
     "isJWTExpiring",
   ],
+  [`${pkg.name}/br`]: [
+    "formatCEP",
+    "formatCNPJ",
+    "formatCPF",
+    "isValidCNPJ",
+    "isValidCPF",
+  ],
   [`${pkg.name}/crypto`]: [
     "generateOpaqueToken",
     "hmacSha256Hex",
@@ -69,6 +76,13 @@ const expectedExports = {
     "safeStorage",
     "toCSV",
   ],
+  [`${pkg.name}/http`]: [
+    "corsHeaders",
+    "fetchJson",
+    "fetchWithTimeout",
+    "jsonResponse",
+    "preflight",
+  ],
   [`${pkg.name}/number`]: [
     "formatCurrency",
     "formatNumber",
@@ -76,6 +90,13 @@ const expectedExports = {
     "parseLocaleNumber",
     "percentOf",
     "toNumber",
+  ],
+  [`${pkg.name}/phone`]: [
+    "buildWhatsAppLink",
+    "formatPhone",
+    "getBRMobileVariants",
+    "normalizePhone",
+    "onlyDigits",
   ],
   [`${pkg.name}/youtube`]: [
     "extractYouTubeId",
@@ -112,6 +133,8 @@ const DEPENDENCY_FREE_ENTRIES = [
   "async/index.cjs",
   "auth/index.js",
   "auth/index.cjs",
+  "br/index.js",
+  "br/index.cjs",
   "crypto/index.js",
   "crypto/index.cjs",
   "date/date-only.js",
@@ -122,8 +145,12 @@ const DEPENDENCY_FREE_ENTRIES = [
   "errors/index.cjs",
   "function/index.js",
   "function/index.cjs",
+  "http/index.js",
+  "http/index.cjs",
   "number/index.js",
   "number/index.cjs",
+  "phone/index.js",
+  "phone/index.cjs",
   "string/index.js",
   "string/index.cjs",
 ]
@@ -166,6 +193,14 @@ const universalEntries = [
       assert.equal(m.getJWTExp(token), 1)
       assert.equal(m.isJWTExpired(token), true)
       assert.equal(m.extractBearerToken("Bearer abc"), "abc")
+    },
+  },
+  {
+    entry: "br/index.cjs",
+    smoke: (m) => {
+      assert.equal(m.formatCEP("01310100"), "01310-100")
+      assert.equal(m.isValidCPF("529.982.247-25"), true)
+      assert.equal(m.isValidCNPJ("11.222.333/0001-81"), true)
     },
   },
   {
@@ -217,11 +252,39 @@ const universalEntries = [
     smoke: (m) => assert.equal(typeof m.debounce(() => {}, 1), "function"),
   },
   {
+    entry: "http/index.cjs",
+    smoke: async (m) => {
+      const headers = m.corsHeaders(
+        new Request("https://x.test", { headers: { Origin: "https://a.com" } }),
+        { origin: ["https://a.com"] },
+      )
+      assert.equal(headers.get("access-control-allow-origin"), "https://a.com")
+      assert.equal(
+        m.preflight(new Request("https://x.test"), { origin: "*" }),
+        null,
+      )
+      assert.equal(m.jsonResponse({ a: 1 }).status, 200)
+      const json = await m.fetchJson('data:application/json,{"a":1}')
+      assert.equal(json.a, 1)
+    },
+  },
+  {
     entry: "number/index.cjs",
     smoke: (m) => {
       assert.equal(m.toNumber("12.5"), 12.5)
       assert.equal(m.parseLocaleNumber("1.234,56"), 1234.56)
       assert.match(m.formatCurrency(1234.5), /1\.234,50$/)
+    },
+  },
+  {
+    entry: "phone/index.cjs",
+    smoke: (m) => {
+      assert.equal(m.normalizePhone("(11) 99999-9999"), "+5511999999999")
+      assert.equal(m.formatPhone("11999999999"), "(11) 99999-9999")
+      assert.equal(
+        m.buildWhatsAppLink("11999999999"),
+        "https://wa.me/5511999999999",
+      )
     },
   },
   {

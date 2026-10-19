@@ -205,4 +205,31 @@ await generateOpaqueToken(0); // rejects with HEROW_CRYPTO_INVALID_BYTES
 await generateOpaqueToken();  // 32 bytes, the default
 ```
 
+## HEROW_CORS_CREDENTIALS_WILDCARD
+
+Thrown synchronously by `corsHeaders` and `preflight` when `credentials: true` is combined with `origin: "*"`. Browsers refuse credentialed responses that allow every origin, so the combination can never work.
+
+Fix: list the origins that may send credentials, or pass a predicate.
+
+```typescript
+corsHeaders(request, { origin: '*', credentials: true });                        // throws
+corsHeaders(request, { origin: ['https://app.example.com'], credentials: true }); // ok
+```
+
+## HEROW_INVALID_JSON
+
+Set as `err.code` on the `HttpError` that `fetchJson` throws when a 2xx response body is not valid JSON. `err.status` is the real response status, `err.cause` is the `SyntaxError` and `err.details.body` holds the first 200 characters of the body. The message never includes the body.
+
+Fix: check that the endpoint returns JSON; an HTML error page from a proxy or a login redirect is the usual cause. Retrying does not help until the response changes.
+
+```typescript
+try {
+  await fetchJson('/api/report');
+} catch (error) {
+  if (isHttpError(error) && error.code === 'HEROW_INVALID_JSON') {
+    console.error(error.status, error.details);
+  }
+}
+```
+
 [← Back to README](../README.md)

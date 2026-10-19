@@ -3,10 +3,13 @@ module.exports = [
   "array",
   "async",
   "auth",
+  "br",
   "crypto",
   "env",
   "errors",
   "function",
+  "http",
   "number",
+  "phone",
   "string",
 ]

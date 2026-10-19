@@ -115,5 +115,20 @@
     "name": "/auth",
     "path": "dist/auth/index.js",
     "limit": "535 B"
+  },
+  {
+    "name": "/br",
+    "path": "dist/br/index.js",
+    "limit": "510 B"
+  },
+  {
+    "name": "/http",
+    "path": "dist/http/index.js",
+    "limit": "2.35 kB"
+  },
+  {
+    "name": "/phone",
+    "path": "dist/phone/index.js",
+    "limit": "685 B"
   }
 ]

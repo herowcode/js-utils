@@ -57,6 +57,16 @@
         "default": "./dist/auth/index.cjs"
       }
     },
+    "./br": {
+      "import": {
+        "types": "./dist/br/index.d.ts",
+        "default": "./dist/br/index.js"
+      },
+      "require": {
+        "types": "./dist/br/index.d.cts",
+        "default": "./dist/br/index.cjs"
+      }
+    },
     "./crypto": {
       "import": {
         "types": "./dist/crypto/index.d.ts",
@@ -137,6 +147,16 @@
         "default": "./dist/function/index.cjs"
       }
     },
+    "./http": {
+      "import": {
+        "types": "./dist/http/index.d.ts",
+        "default": "./dist/http/index.js"
+      },
+      "require": {
+        "types": "./dist/http/index.d.cts",
+        "default": "./dist/http/index.cjs"
+      }
+    },
     "./logger": {
       "browser": {
         "import": {
@@ -175,6 +195,16 @@
       "require": {
         "types": "./dist/number/index.d.cts",
         "default": "./dist/number/index.cjs"
+      }
+    },
+    "./phone": {
+      "import": {
+        "types": "./dist/phone/index.d.ts",
+        "default": "./dist/phone/index.js"
+      },
+      "require": {
+        "types": "./dist/phone/index.d.cts",
+        "default": "./dist/phone/index.cjs"
       }
     },
     "./string": {

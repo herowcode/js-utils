@@ -61,14 +61,17 @@ Projetado, construído e mantido por [Judson Cairo](https://judsoncairo.com) com
 | `/array` | shuffle, unique, chunk, sumBy, groupBy, keyBy | [docs/array.md](../array.md) |
 | `/async` | sleep, withTimeout, retry (somente transitórios), backoff, limitador de concorrência, createSingleFlight _(universal)_ | [docs/async.md](../async.md) |
 | `/auth` | decodeJWT (sem verificar assinatura), getJWTExp, isJWTExpired, isJWTExpiring, extractBearerToken _(universal)_ | [docs/auth.md](../auth.md) |
+| `/br` | formatCEP, formatCPF/isValidCPF, formatCNPJ/isValidCNPJ com dígitos verificadores (inclui CNPJ alfanumérico) _(universal)_ | [docs/br.md](../br.md) |
 | `/crypto` | sha256Hex, hmacSha256Hex, safeEqual, generateOpaqueToken, verifyHmacSignature sobre WebCrypto _(universal)_ | [docs/crypto.md](../crypto.md) |
 | `/date` | Formatação, tempo relativo, timezone, tempo gasto, helpers de data (YYYY-MM-DD) com timezone (`toISODate`, `addDaysISO`) | [docs/date.md](../date.md) |
 | `/env` | requireEnv, optionalEnv, parseBoolean com fonte injetável e erros com código _(universal)_ | [docs/env.md](../env.md) |
 | `/errors` | getErrorMessage, getErrorStatus, getRootCause, detecção de erros transitórios, família HttpError _(universal)_ | [docs/errors.md](../errors.md) |
 | `/files` | Comprimir imagens, download de URLs/blobs, copiar para a área de transferência, formatar bytes _(browser + Node)_; toCSV _(universal)_ | [docs/files.md](../files.md) |
 | `/function` | debounce, throttle, tryCatch, tryCatchResult, isBrowser/isServer, safeJsonParse | [docs/function.md](../function.md) |
+| `/http` | corsHeaders, preflight, jsonResponse, fetchWithTimeout, fetchJson sobre Request/Response da Web _(universal)_ | [docs/http.md](../http.md) |
 | `/logger` | Logger estruturado (Pino no Node, baseado em console no browser), redactSecrets, redactDeep | [docs/logger.md](../logger.md) |
 | `/number` | formatCurrency, formatNumber, formatPercent, percentOf, parseLocaleNumber, toNumber _(universal)_ | [docs/number.md](../number.md) |
+| `/phone` | onlyDigits, normalizePhone (E.164, BR/US), formatPhone, getBRMobileVariants, buildWhatsAppLink _(universal)_ | [docs/phone.md](../phone.md) |
 | `/string` | Conversão de case, slugify, removeAccents, normalizeText, truncate, markdownToText, getInitials, escapeHtml, escapeRegExp, pluralize, formatação de tempo | [docs/string.md](../string.md) |
 | `/youtube` | Extrair IDs, gerar URLs, informações de vídeo com cache | [docs/youtube.md](../youtube.md) |
 
