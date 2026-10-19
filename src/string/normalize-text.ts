@@ -1,7 +1,7 @@
 import { removeAccents } from "./remove-accents"
 
 /**
- * Lowercases, strips accents and punctuation, and collapses whitespace to single spaces.
+ * Lowercases, strips accents and collapses whitespace; keeps only ASCII letters, digits, "_" and spaces (non-Latin scripts are dropped).
  * @example normalizeText("  Olá,   Mundo! ") // "ola mundo"
  */
 export function normalizeText(text: string): string {

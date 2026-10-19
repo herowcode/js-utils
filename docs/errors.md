@@ -134,8 +134,12 @@ throw new TooManyRequestsError('Slow down', { retryAfterSeconds: 30 });
 | `status` | HTTP status number (the same name as `Response.status` and `IApiError.status`) |
 | `code` | Optional machine-readable code from the server or your app |
 | `details` | Optional extra payload, e.g. validation issues |
-| `retryAfterSeconds` | Set on `TooManyRequestsError` and on 503 errors from `fetchJson`; [`retry`](async.md#retryfn-options) waits that long |
+| `retryAfterSeconds` | Ignored (left `undefined`) unless a finite number >= 0. Set on `TooManyRequestsError` and on 503 errors from `fetchJson`; [`retry`](async.md#retryfn-options) waits that long |
 | `cause` | Standard `Error` cause |
+
+`status` must be an integer from 100 to 599, otherwise the constructor throws [`HEROW_HTTP_INVALID_STATUS`](#herow_http_invalid_status). Success statuses are allowed (`fetchJson` builds a 200 `HttpError` for an invalid JSON body). `name` is `readonly`.
+
+Subclasses outside this package must declare their own unique `static readonly kind` (for example `static override readonly kind = "PaymentRequiredError"`). Without it the cross-copy `instanceof` check cannot tell them from their parent.
 
 Subclass constructors are `(message?, options?)`, with a default message ("Not Found", ...). `HttpError` itself is `(status, message?, options?)`, default message `HTTP <status>`.
 
@@ -226,6 +230,17 @@ Fix: list the origins that may send credentials, or pass a predicate.
 ```typescript
 corsHeaders(request, { origin: '*', credentials: true });                        // throws
 corsHeaders(request, { origin: ['https://app.example.com'], credentials: true }); // ok
+```
+
+## HEROW_HTTP_INVALID_STATUS
+
+Thrown synchronously (as a `RangeError`) by the `HttpError` constructor when `status` is not an integer from 100 to 599. The value is not echoed.
+
+Fix: pass a real HTTP status code; map unknown upstream values before constructing the error.
+
+```typescript
+new HttpError(502, 'Bad gateway'); // ok
+new HttpError(0, 'x');             // throws HEROW_HTTP_INVALID_STATUS
 ```
 
 ## HEROW_INVALID_JSON

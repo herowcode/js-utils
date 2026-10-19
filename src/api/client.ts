@@ -1,4 +1,5 @@
 import { backoffDelay, parseRetryAfterMs, sleep, withTimeout } from "../async"
+import { MAX_TIMER_DELAY } from "../async/timer-delay"
 import { TRANSIENT_STATUS_CODES } from "../errors"
 import { buildQueryString, type TQueryParams } from "./build-query-string"
 import { apiWrapper } from "./wrapper"
@@ -30,7 +31,6 @@ const defaultRetryConfig: Required<IRetryOptions> = {
 
 const MAX_RETRY_LIMIT = 10
 // setTimeout fires immediately for delays above 2^31-1 ms
-const MAX_TIMER_DELAY = 2 ** 31 - 1
 const MAX_BODY_SNIPPET = 200
 
 // Callbacks can't be cancelled, so stop waiting for them once the request aborts

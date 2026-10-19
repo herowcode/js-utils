@@ -1,5 +1,5 @@
+import type { IFormatBROptions } from "./clean-document"
 import { cleanAlphanumeric } from "./clean-document"
-import type { IFormatBROptions } from "./format-cep"
 
 /**
  * Formats 14 characters as a CNPJ (`11.222.333/0001-81`, letters allowed); it checks the length only, use `isValidCNPJ` for the check digits.

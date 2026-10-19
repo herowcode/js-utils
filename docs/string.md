@@ -92,7 +92,7 @@ toSentenceCase('HELLO WORLD');  // → "Hello world"
 
 ### `slugify(text, options?)`
 
-Converts a string to a URL-friendly slug. Strips accents, replaces spaces with hyphens, and removes special characters.
+Converts a string to a URL-friendly slug. Strips accents, replaces spaces with hyphens, and removes special characters. Only ASCII letters, digits and `_` survive, so non-Latin scripts (CJK, Cyrillic, Arabic) are dropped.
 
 ```typescript
 slugify('Hello World!');         // → "hello-world"
@@ -119,7 +119,7 @@ Invalid input returns: not applicable, a non-string throws a `TypeError`.
 
 ### `normalizeText(text)`
 
-Lowercases, strips accents and punctuation, and collapses whitespace to single spaces. Use it to compare or search text; `slugify` is `normalizeText` with spaces turned into hyphens.
+Lowercases, strips accents and punctuation, and collapses whitespace to single spaces. It keeps only ASCII letters, digits, `_` and spaces; non-Latin scripts are dropped. Use it to compare or search text; `slugify` is `normalizeText` with spaces turned into hyphens.
 
 ```typescript
 normalizeText('  Olá,   Mundo! '); // → "ola mundo"

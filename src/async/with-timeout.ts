@@ -1,3 +1,5 @@
+import { clampTimerDelay } from "./timer-delay"
+
 function timeoutReason(): unknown {
   const message = "The operation timed out."
   if (typeof DOMException === "function") {
@@ -23,7 +25,7 @@ function manualTimeout(
   const timer = setTimeout(() => {
     signal?.removeEventListener("abort", onAbort)
     controller.abort(timeoutReason())
-  }, timeoutMs)
+  }, clampTimerDelay(timeoutMs))
   signal?.addEventListener("abort", onAbort, { once: true })
   return controller.signal
 }

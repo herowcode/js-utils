@@ -43,7 +43,7 @@ export function createSafeStorage(resolve: () => Storage | null): ISafeStorage {
       const value = backend()?.getItem(key)
       if (value != null) return value
     } catch {
-      // Fall through to the in-memory copy
+      // Storage unavailable (blocked, SecurityError): report a miss
     }
     return null
   }

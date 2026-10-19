@@ -1,8 +1,6 @@
-import { isHttpError } from "./is-http-error"
 import { walkCause } from "./walk-cause"
 
 function readStatus(link: object): number | undefined {
-  if (isHttpError(link) && Number.isFinite(link.status)) return link.status
   const candidate = link as {
     status?: unknown
     statusCode?: unknown

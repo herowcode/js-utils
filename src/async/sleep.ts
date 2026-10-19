@@ -1,3 +1,5 @@
+import { clampTimerDelay } from "./timer-delay"
+
 /**
  * Resolves after `ms`; rejects with the signal's reason as soon as `signal` aborts.
  * @example await sleep(500, controller.signal)
@@ -12,7 +14,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     const timer = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort)
       resolve()
-    }, ms)
+    }, clampTimerDelay(ms))
     signal?.addEventListener("abort", onAbort, { once: true })
   })
 }

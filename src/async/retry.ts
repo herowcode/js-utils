@@ -6,6 +6,7 @@ import {
 import { backoffDelay } from "./backoff-delay"
 import { parseRetryAfterMs } from "./parse-retry-after-ms"
 import { sleep } from "./sleep"
+import { MAX_TIMER_DELAY } from "./timer-delay"
 
 export interface IAsyncRetryOptions {
   /** Total tries, first call included. Defaults to 3. */
@@ -21,8 +22,6 @@ export interface IAsyncRetryOptions {
   onRetry?: (error: unknown, attempt: number, delayMs: number) => void
   signal?: AbortSignal
 }
-
-const MAX_TIMER_DELAY = 2 ** 31 - 1
 
 function isAbortError(error: unknown): boolean {
   return (error as { name?: unknown } | null | undefined)?.name === "AbortError"

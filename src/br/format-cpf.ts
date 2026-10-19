@@ -1,5 +1,5 @@
+import type { IFormatBROptions } from "./clean-document"
 import { cleanDigits } from "./clean-document"
-import type { IFormatBROptions } from "./format-cep"
 
 /**
  * Formats 11 digits as a CPF (`529.982.247-25`); it checks the length only, use `isValidCPF` for the check digits.

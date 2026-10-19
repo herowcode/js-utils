@@ -1,3 +1,8 @@
+export interface IFormatBROptions {
+  /** Returned when the value does not have the right number of digits; `""` by default. */
+  fallback?: string
+}
+
 /** Internal: uppercase alphanumerics only (CNPJ may contain letters since 2026). */
 export function cleanAlphanumeric(value: unknown): string {
   return typeof value === "string"

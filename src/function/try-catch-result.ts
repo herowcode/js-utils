@@ -8,7 +8,7 @@ export type TTryCatchFail<E> = { ok: false; error: E }
  * if (!r.ok) return log(r.error)
  * r.data // User
  */
-export async function tryCatchResult<T, E = Error>(
+export async function tryCatchResult<T, E = unknown>(
   fn: Promise<T> | (() => Promise<T> | T),
 ): Promise<TTryCatchOk<T> | TTryCatchFail<E>> {
   try {

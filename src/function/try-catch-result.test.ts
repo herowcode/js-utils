@@ -35,7 +35,7 @@ describe("tryCatchResult", () => {
   it("narrows on ok", async () => {
     const r = await tryCatchResult(Promise.resolve("x"))
     if (!r.ok) {
-      expectTypeOf(r.error).toEqualTypeOf<Error>()
+      expectTypeOf(r.error).toEqualTypeOf<unknown>()
       return
     }
     expectTypeOf(r.data).toEqualTypeOf<string>()

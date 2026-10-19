@@ -1,4 +1,4 @@
-export type { IFormatBROptions } from "./format-cep"
+export type { IFormatBROptions } from "./clean-document"
 export { formatCEP } from "./format-cep"
 export * from "./format-cnpj"
 export * from "./format-cpf"

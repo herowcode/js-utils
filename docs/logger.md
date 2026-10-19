@@ -202,7 +202,7 @@ import { redactDeep, redactSecrets } from '@herowcode/utils/logger'
 
 ### `redactSecrets(text, options?)`
 
-Masks secrets inside free text: `Authorization`/`Bearer` tokens, JWT-shaped strings, `key=value` and `"key": "value"` pairs whose key is one of the logger's secret keys (`password`, `token`, `apiKey`/`api_key`, `authorization`, `cookie`, `secret`), whole `Cookie:` header lines, and common API-key prefixes (`sk-`, `sk_live_`, `ghp_`, `github_pat_`, `xoxb-`, `AKIA`, `AIza`). Keys and quotes are kept; only the value is replaced.
+Masks secrets inside free text: `Authorization`/`Bearer` tokens, JWT-shaped strings, `key=value` and `"key": "value"` pairs whose key is one of the logger's secret keys (`password`, `token`, `apiKey`/`api_key`, `authorization`, `cookie`, `secret`), whole `Cookie:` header lines, passwords inside connection URLs (`postgres://user:pass@host` becomes `postgres://user:[REDACTED]@host`), and common API-key prefixes (`sk-`, `sk_live_`, `ghp_`, `github_pat_`, `xoxb-`, `AKIA`, `AIza`). Keys and quotes are kept; only the value is replaced.
 
 ```typescript
 redactSecrets('Authorization: Bearer abc.def')       // → "Authorization: [REDACTED]"

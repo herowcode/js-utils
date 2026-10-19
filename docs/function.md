@@ -178,7 +178,7 @@ Same input as `tryCatch` (a promise, or a function returning a value or promise)
 ```typescript
 const r = await tryCatchResult(() => fetchUser(id));
 if (!r.ok) {
-  report(r.error); // E (defaults to Error)
+  report(r.error); // E (defaults to unknown; narrow it or pass E explicitly)
   return;
 }
 r.data; // User

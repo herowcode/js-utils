@@ -1,3 +1,4 @@
+import { herowError } from "./herow-error"
 import { HTTP_ERROR_BRAND } from "./http-error-brand"
 import { isHttpError } from "./is-http-error"
 
@@ -7,16 +8,12 @@ export interface IHttpErrorOptions {
   /** Extra payload, e.g. validation issues. */
   details?: unknown
   cause?: unknown
-  /** Seconds the client should wait before retrying (429/503); `retry` honours it. */
-  retryAfterSeconds?: number
-}
-
-export interface ITooManyRequestsErrorOptions extends IHttpErrorOptions {
+  /** Seconds to wait before retrying (429/503); `retry` honours it. Negative or non-finite values are ignored. */
   retryAfterSeconds?: number
 }
 
 /**
- * Error carrying an HTTP `status`; `instanceof` and `isHttpError` also work across CJS/ESM copies.
+ * Error carrying an HTTP `status` (integer 100-599, else `HEROW_HTTP_INVALID_STATUS`); `instanceof` and `isHttpError` also work across CJS/ESM copies.
  * @example throw new HttpError(502, "Bad gateway", { code: "UPSTREAM_DOWN" })
  */
 export class HttpError extends Error {
@@ -36,7 +33,7 @@ export class HttpError extends Error {
     )
   }
 
-  override name = "HttpError"
+  override readonly name: string = "HttpError"
   readonly status: number
   readonly code?: string
   readonly details?: unknown
@@ -47,11 +44,23 @@ export class HttpError extends Error {
     message = `HTTP ${status}`,
     { code, details, cause, retryAfterSeconds }: IHttpErrorOptions = {},
   ) {
+    if (!Number.isInteger(status) || status < 100 || status > 599) {
+      throw herowError(
+        RangeError,
+        "HEROW_HTTP_INVALID_STATUS",
+        "HttpError received an invalid status (expected an integer from 100 to 599).",
+        "Pass a real HTTP status code.",
+      )
+    }
     super(message, cause === undefined ? undefined : { cause })
     this.status = status
     if (code !== undefined) this.code = code
     if (details !== undefined) this.details = details
-    if (retryAfterSeconds !== undefined) {
+    if (
+      typeof retryAfterSeconds === "number" &&
+      Number.isFinite(retryAfterSeconds) &&
+      retryAfterSeconds >= 0
+    ) {
       this.retryAfterSeconds = retryAfterSeconds
     }
   }
@@ -67,7 +76,7 @@ export class HttpError extends Error {
  */
 export class BadRequestError extends HttpError {
   static override readonly kind = "BadRequestError"
-  override name = "BadRequestError"
+  override readonly name = "BadRequestError"
   constructor(message = "Bad Request", options?: IHttpErrorOptions) {
     super(400, message, options)
   }
@@ -79,7 +88,7 @@ export class BadRequestError extends HttpError {
  */
 export class UnauthorizedError extends HttpError {
   static override readonly kind = "UnauthorizedError"
-  override name = "UnauthorizedError"
+  override readonly name = "UnauthorizedError"
   constructor(message = "Unauthorized", options?: IHttpErrorOptions) {
     super(401, message, options)
   }
@@ -91,7 +100,7 @@ export class UnauthorizedError extends HttpError {
  */
 export class ForbiddenError extends HttpError {
   static override readonly kind = "ForbiddenError"
-  override name = "ForbiddenError"
+  override readonly name = "ForbiddenError"
   constructor(message = "Forbidden", options?: IHttpErrorOptions) {
     super(403, message, options)
   }
@@ -103,7 +112,7 @@ export class ForbiddenError extends HttpError {
  */
 export class NotFoundError extends HttpError {
   static override readonly kind = "NotFoundError"
-  override name = "NotFoundError"
+  override readonly name = "NotFoundError"
   constructor(message = "Not Found", options?: IHttpErrorOptions) {
     super(404, message, options)
   }
@@ -115,7 +124,7 @@ export class NotFoundError extends HttpError {
  */
 export class ConflictError extends HttpError {
   static override readonly kind = "ConflictError"
-  override name = "ConflictError"
+  override readonly name = "ConflictError"
   constructor(message = "Conflict", options?: IHttpErrorOptions) {
     super(409, message, options)
   }
@@ -127,11 +136,8 @@ export class ConflictError extends HttpError {
  */
 export class TooManyRequestsError extends HttpError {
   static override readonly kind = "TooManyRequestsError"
-  override name = "TooManyRequestsError"
-  constructor(
-    message = "Too Many Requests",
-    options?: ITooManyRequestsErrorOptions,
-  ) {
+  override readonly name = "TooManyRequestsError"
+  constructor(message = "Too Many Requests", options?: IHttpErrorOptions) {
     super(429, message, options)
   }
 }
