@@ -42,6 +42,7 @@ const expectedExports = {
     "fileDelete",
     "fileExists",
     "formatBytes",
+    "safeStorage",
     "toCSV",
   ],
   [`${pkg.name}/number`]: [

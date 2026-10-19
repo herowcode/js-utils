@@ -4,7 +4,7 @@ File utilities with conditional browser/Node.js exports. Bundlers and Node.js re
 
 ```typescript
 // Browser environment — gets browser-specific functions
-import { compressImage, copyToClipboard, downloadBlob, downloadUrl, formatBytes, toCSV } from '@herowcode/utils/files';
+import { compressImage, copyToClipboard, downloadBlob, downloadUrl, formatBytes, safeStorage, toCSV } from '@herowcode/utils/files';
 
 // Node.js environment — gets server-specific functions
 import { fileExists, fileDelete, formatBytes } from '@herowcode/utils/files';
@@ -104,6 +104,35 @@ formatBytes(1536, { locale: 'pt-BR' });          // → "1,50 KB"
 | `decimals` | `2` | Digits after the decimal point |
 | `base` | `1024` | `1024` or `1000` per unit step; unit labels stay `KB`, `MB`, ... |
 | `locale` | none | BCP 47 locale for the number (decimal separator, grouping); without it the number uses `.` |
+
+### `safeStorage(kind?)`
+
+`localStorage` (or `sessionStorage` with `"session"`) that never throws. Blocked storage (Safari private mode, cookies disabled), quota errors and server rendering fall back to an in-memory map that lives as long as the returned object. Every call to `safeStorage()` has its own memory.
+
+```typescript
+const prefs = safeStorage();
+
+prefs.setJSON('prefs', { theme: 'dark' });          // → true (persisted)
+prefs.getJSON('prefs', { fallback: { theme: 'light' } }); // → { theme: 'dark' }
+prefs.get('token');                                  // → string | null
+prefs.remove('token');
+```
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get(key)` | `string \| null` | Stored value, or the in-memory copy when storage failed |
+| `set(key, value)` | `boolean` | `true` when persisted; `false` when the value only fits in memory |
+| `remove(key)` | `void` | Removes from storage and memory |
+| `getJSON(key, { fallback }?)` | `T` / `T \| null` | Parsed value; a missing key or invalid JSON gives `fallback` (default `null`). The invalid raw value is left in storage |
+| `setJSON(key, value)` | `boolean` | `JSON.stringify` then `set`; `false` when the value cannot be serialized or persisted |
+
+Storage is first touched on the first call, inside a `try/catch`, so creating it at module scope is safe in SSR. With no `window` it uses memory, and the same instance switches to real storage once `window` exists. The Node.js entry exports a memory-only version instead of throwing.
+
+Invalid input returns: `get` returns `null`, `getJSON` returns `fallback` (or `null`), `set` and `setJSON` return `false`; nothing throws.
+
+#### Replacing a local copy
+
+Replaces `try { localStorage.getItem(k) } catch {}` wrappers. Check the boolean from `set` when losing the write matters (it survives only until the page closes when `false`).
 
 ---
 

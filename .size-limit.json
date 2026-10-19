@@ -66,7 +66,7 @@
   {
     "name": "/files (browser)",
     "path": "dist/files/index.browser.js",
-    "limit": "1.7 kB"
+    "limit": "2 kB"
   },
   {
     "name": "/logger (browser)",
@@ -99,5 +99,11 @@
     "path": "dist/files/index.browser.js",
     "import": "{ toCSV }",
     "limit": "520 B"
+  },
+  {
+    "name": "safeStorage from /files (browser)",
+    "path": "dist/files/index.browser.js",
+    "import": "{ safeStorage }",
+    "limit": "360 B"
   }
 ]
