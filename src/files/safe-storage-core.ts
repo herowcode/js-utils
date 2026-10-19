@@ -36,13 +36,16 @@ export function createSafeStorage(resolve: () => Storage | null): ISafeStorage {
   }
 
   const get = (key: string): string | null => {
+    // A failed set leaves the newer value in memory and an older one in storage
+    const pending = memory.get(key)
+    if (pending !== undefined) return pending
     try {
       const value = backend()?.getItem(key)
       if (value != null) return value
     } catch {
       // Fall through to the in-memory copy
     }
-    return memory.get(key) ?? null
+    return null
   }
 
   const set = (key: string, value: string): boolean => {

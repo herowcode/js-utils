@@ -7,10 +7,11 @@ export interface IHttpErrorOptions {
   /** Extra payload, e.g. validation issues. */
   details?: unknown
   cause?: unknown
+  /** Seconds the client should wait before retrying (429/503); `retry` honours it. */
+  retryAfterSeconds?: number
 }
 
 export interface ITooManyRequestsErrorOptions extends IHttpErrorOptions {
-  /** Seconds the client should wait before retrying; `retry` honours it. */
   retryAfterSeconds?: number
 }
 
@@ -39,16 +40,20 @@ export class HttpError extends Error {
   readonly status: number
   readonly code?: string
   readonly details?: unknown
+  readonly retryAfterSeconds?: number
 
   constructor(
     status: number,
     message = `HTTP ${status}`,
-    { code, details, cause }: IHttpErrorOptions = {},
+    { code, details, cause, retryAfterSeconds }: IHttpErrorOptions = {},
   ) {
     super(message, cause === undefined ? undefined : { cause })
     this.status = status
     if (code !== undefined) this.code = code
     if (details !== undefined) this.details = details
+    if (retryAfterSeconds !== undefined) {
+      this.retryAfterSeconds = retryAfterSeconds
+    }
   }
 
   get [HTTP_ERROR_BRAND](): string {
@@ -123,14 +128,10 @@ export class ConflictError extends HttpError {
 export class TooManyRequestsError extends HttpError {
   static override readonly kind = "TooManyRequestsError"
   override name = "TooManyRequestsError"
-  readonly retryAfterSeconds?: number
   constructor(
     message = "Too Many Requests",
-    { retryAfterSeconds, ...options }: ITooManyRequestsErrorOptions = {},
+    options?: ITooManyRequestsErrorOptions,
   ) {
     super(429, message, options)
-    if (retryAfterSeconds !== undefined) {
-      this.retryAfterSeconds = retryAfterSeconds
-    }
   }
 }

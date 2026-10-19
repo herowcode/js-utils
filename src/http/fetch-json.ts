@@ -4,7 +4,11 @@ import {
   fetchWithTimeout,
   type IFetchWithTimeoutOptions,
 } from "./fetch-with-timeout"
-import { excerpt, httpErrorFromResponse } from "./http-error-from-response"
+import {
+  excerpt,
+  httpErrorFromResponse,
+  readCappedText,
+} from "./http-error-from-response"
 
 /**
  * Fetches JSON and throws an `HttpError` for non-2xx responses or an unparseable body; 204 and empty bodies give `undefined`.
@@ -19,8 +23,10 @@ export async function fetchJson<T = unknown>(
   if (!headers.has("Accept")) headers.set("Accept", "application/json")
   const response = await fetchWithTimeout(input, { ...init, headers }, options)
   if (response.status === 204 || response.status === 205) return undefined
+  if (!response.ok) {
+    throw httpErrorFromResponse(response, await readCappedText(response))
+  }
   const text = await response.text()
-  if (!response.ok) throw httpErrorFromResponse(response, text)
   if (text.trim() === "") return undefined
   try {
     return JSON.parse(text) as T

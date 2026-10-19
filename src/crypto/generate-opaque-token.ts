@@ -10,6 +10,7 @@ export interface IOpaqueToken {
   hash: string
 }
 
+const MIN_BYTES = 16
 const MAX_BYTES = 65_536
 
 /**
@@ -17,12 +18,12 @@ const MAX_BYTES = 65_536
  * @example const { token, hash } = await generateOpaqueToken()
  */
 export async function generateOpaqueToken(bytes = 32): Promise<IOpaqueToken> {
-  if (!Number.isInteger(bytes) || bytes < 1 || bytes > MAX_BYTES) {
+  if (!Number.isInteger(bytes) || bytes < MIN_BYTES || bytes > MAX_BYTES) {
     throw herowError(
       RangeError,
       "HEROW_CRYPTO_INVALID_BYTES",
-      `generateOpaqueToken received an invalid byte count (expected an integer from 1 to ${MAX_BYTES}).`,
-      "Pass a whole number of bytes, 16 or more for session tokens.",
+      `generateOpaqueToken received an invalid byte count (expected an integer from ${MIN_BYTES} to ${MAX_BYTES}).`,
+      "Pass a whole number of bytes, at least 16.",
     )
   }
   const random = getWebCrypto().getRandomValues(new Uint8Array(bytes))

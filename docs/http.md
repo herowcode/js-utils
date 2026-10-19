@@ -139,10 +139,10 @@ try {
 |----------|--------|
 | 2xx with JSON | the parsed value |
 | `204`, `205` or an empty 2xx body | `undefined` |
-| non-2xx | throws `HttpError`, or `BadRequestError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ConflictError` (409), `TooManyRequestsError` (429, with `retryAfterSeconds` from `Retry-After`) |
+| non-2xx | throws `HttpError`, or `BadRequestError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ConflictError` (409), `TooManyRequestsError` (429, with `retryAfterSeconds` from `Retry-After`); a 503 `HttpError` also gets `retryAfterSeconds` |
 | 2xx that is not JSON | throws `HttpError` with the real status and code [`HEROW_INVALID_JSON`](errors.md#herow_invalid_json) |
 
-For non-2xx responses the error's `message` comes from the JSON body (`message`, `error` or `detail`) or is `HTTP <status>`; `code` is the body's `code` when it is a string, and `details` is the parsed body (or the first 200 characters when it is not JSON). For invalid JSON, `cause` is the `SyntaxError` and `details.body` holds the first 200 characters of the body. Both `HttpError` and the subclasses come from [`errors`](errors.md).
+For non-2xx responses the error's `message` comes from the JSON body (`message`, `error` or `detail`) or is `HTTP <status>`; `code` is the body's `code` when it is a string, and `details` is the parsed body (or the first 200 characters when it is not JSON). Only the first 64 KB of an error body is read, and `details` is untrusted server data: validate it and never render it as HTML or log it unredacted. For invalid JSON, `cause` is the `SyntaxError` and `details.body` holds the first 200 characters of the body. Both `HttpError` and the subclasses come from [`errors`](errors.md).
 
 The return type is `Promise<T | undefined>` because of the empty-body case.
 

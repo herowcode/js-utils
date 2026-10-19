@@ -112,11 +112,11 @@ const { token, hash } = await generateOpaqueToken();
 await db.sessions.insert({ tokenHash: hash });
 ```
 
-`bytes` is the amount of randomness from `crypto.getRandomValues`; use 16 or more for session tokens.
+`bytes` is the amount of randomness from `crypto.getRandomValues`; the minimum is 16.
 
-Throws (rejects): [`HEROW_CRYPTO_INVALID_BYTES`](errors.md#herow_crypto_invalid_bytes) when `bytes` is not an integer from 1 to 65536.
+Throws (rejects): [`HEROW_CRYPTO_INVALID_BYTES`](errors.md#herow_crypto_invalid_bytes) when `bytes` is not an integer from 16 to 65536.
 
-Invalid input returns: not applicable, `bytes` outside 1 to 65536 rejects with `HEROW_CRYPTO_INVALID_BYTES`.
+Invalid input returns: not applicable, `bytes` outside 16 to 65536 rejects with `HEROW_CRYPTO_INVALID_BYTES`.
 
 ### Replacing a local copy
 

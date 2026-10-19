@@ -71,7 +71,7 @@
   {
     "name": "/logger (browser)",
     "path": "dist/logger/index.browser.js",
-    "limit": "1.9 kB"
+    "limit": "2.1 kB"
   },
   {
     "name": "/youtube (browser)",
@@ -129,6 +129,6 @@
   {
     "name": "/phone",
     "path": "dist/phone/index.js",
-    "limit": "685 B"
+    "limit": "760 B"
   }
 ]

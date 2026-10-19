@@ -79,6 +79,8 @@ groupBy([1, 2, 3, 4], (n) => (n % 2 ? 'odd' : 'even'));
 
 Invalid input returns: `{}` for an empty array.
 
+Results are plain objects: check membership with `Object.hasOwn(result, key)`, not `key in result`.
+
 ### Replacing a local copy
 
 Same result as `Object.groupBy` or a `reduce` that pushes into `acc[key]`, without the prototype-key pitfall.
@@ -93,6 +95,8 @@ Indexes items by the key `fn(item, index)` returns. On duplicate keys the last i
 keyBy([{ id: 'a', n: 1 }, { id: 'b', n: 2 }], (u) => u.id);
 // → { a: { id: 'a', n: 1 }, b: { id: 'b', n: 2 } }
 ```
+
+Results are plain objects: check membership with `Object.hasOwn(result, key)`, not `key in result`.
 
 Invalid input returns: `{}` for an empty array.
 

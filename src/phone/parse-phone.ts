@@ -28,12 +28,28 @@ function parseUS(digits: string): string | undefined {
   return /^[2-9]\d{2}[2-9]\d{6}$/.test(national) ? national : undefined
 }
 
+// A leading `+` names the country, so the `country` option is ignored
+function parsePlus(digits: string): IParsedPhone | undefined {
+  if (digits.startsWith("55")) {
+    const national = digits.slice(2)
+    return isBRNational(national) ? { country: "BR", national } : undefined
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    const national = parseUS(digits)
+    return national ? { country: "US", national } : undefined
+  }
+  return undefined
+}
+
 /** Internal: validates a BR or US number and returns its national digits. */
 export function parsePhone(
   input: unknown,
   country: TPhoneCountry,
 ): IParsedPhone | undefined {
   const digits = onlyDigits(input)
+  if (typeof input === "string" && input.trimStart().startsWith("+")) {
+    return parsePlus(digits)
+  }
   const national = country === "US" ? parseUS(digits) : parseBR(digits)
   return national ? { country, national } : undefined
 }

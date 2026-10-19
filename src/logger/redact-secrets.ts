@@ -7,15 +7,24 @@ export interface IRedactSecretsOptions {
   extraPatterns?: readonly TSecretPattern[]
 }
 
-const KEY_NAMES = Array.from(DEFAULT_REDACT_KEYS, (key) =>
-  key === "apikey" ? "api[_-]?key" : key,
+const KEY_SPELLINGS: Record<string, string> = {
+  apikey: "api[_-]?key",
+  xapikey: "x[_-]?api[_-]?key",
+  privatekey: "private[_-]?key",
+  setcookie: "set[_-]?cookie",
+}
+const KEY_NAMES = Array.from(
+  DEFAULT_REDACT_KEYS,
+  (key) => KEY_SPELLINGS[key] ?? key,
 ).join("|")
 
-// Lookbehinds keep every pattern anchored to token starts, so scans stay linear on adversarial input
+// Lookbehinds anchor patterns to token starts and the key prefix is bounded, so scans stay linear on adversarial input
 const KEY_VALUE = new RegExp(
-  `(?<![A-Za-z0-9])(${KEY_NAMES})(["']?\\s*[:=]\\s*)(?:(?:bearer|basic)\\s+)?("[^"]*"|'[^']*'|[^\\s,&}"']+)`,
+  `(?<![\\w-])([\\w-]{0,40}(?:${KEY_NAMES}))(["']?\\s*[:=]\\s*)(?:(?:bearer|basic)\\s+)?("[^"]*"|'[^']*'|[^\\s,&}"']+)`,
   "gi",
 )
+const AUTHORIZATION =
+  /(?<![\w-])([\w-]{0,40}authorization["']?\s*[:=]\s*)("[^"]*"|'[^']*'|(?:[a-z][\w-]*[ \t]+)?[^\s,&}"']+)/gi
 const COOKIE_HEADER = /(?<![A-Za-z0-9])(cookie\s*:\s*)[^\r\n]+/gi
 const BEARER = /(?<![\w-])(bearer\s+)[\w.~+/=-]+/gi
 const JWT = /(?<![\w-])eyJ[\w-]{4,}\.[\w-]{4,}\.[\w-]*/g
@@ -41,6 +50,10 @@ export function createSecretRedactor(
   return (text) => {
     let out = text
       .replace(COOKIE_HEADER, `$1${REDACTED}`)
+      .replace(AUTHORIZATION, (_m, head: string, value: string) => {
+        const quote = value[0] === '"' || value[0] === "'" ? value[0] : ""
+        return `${head}${quote}${REDACTED}${quote}`
+      })
       .replace(KEY_VALUE, (_m, key: string, sep: string, value: string) => {
         const quote = value[0] === '"' || value[0] === "'" ? value[0] : ""
         return `${key}${sep}${quote}${REDACTED}${quote}`

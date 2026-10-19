@@ -134,7 +134,7 @@ throw new TooManyRequestsError('Slow down', { retryAfterSeconds: 30 });
 | `status` | HTTP status number (the same name as `Response.status` and `IApiError.status`) |
 | `code` | Optional machine-readable code from the server or your app |
 | `details` | Optional extra payload, e.g. validation issues |
-| `retryAfterSeconds` | `TooManyRequestsError` only; [`retry`](async.md#retryfn-options) waits that long |
+| `retryAfterSeconds` | Set on `TooManyRequestsError` and on 503 errors from `fetchJson`; [`retry`](async.md#retryfn-options) waits that long |
 | `cause` | Standard `Error` cause |
 
 Subclass constructors are `(message?, options?)`, with a default message ("Not Found", ...). `HttpError` itself is `(status, message?, options?)`, default message `HTTP <status>`.
@@ -208,12 +208,12 @@ await sha256Hex('x'); // rejects with HEROW_CRYPTO_UNAVAILABLE where WebCrypto i
 
 ## HEROW_CRYPTO_INVALID_BYTES
 
-Thrown (as a `RangeError`, in a rejected promise) by `generateOpaqueToken(bytes)` when `bytes` is not a whole number from 1 to 65536.
+Thrown (as a `RangeError`, in a rejected promise) by `generateOpaqueToken(bytes)` when `bytes` is not a whole number from 16 to 65536.
 
-Fix: pass an integer byte count; use 16 or more for session tokens.
+Fix: pass an integer byte count; use at least 16.
 
 ```typescript
-await generateOpaqueToken(0); // rejects with HEROW_CRYPTO_INVALID_BYTES
+await generateOpaqueToken(8); // rejects with HEROW_CRYPTO_INVALID_BYTES
 await generateOpaqueToken();  // 32 bytes, the default
 ```
 
