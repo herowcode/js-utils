@@ -25,6 +25,7 @@ const expectedExports = {
     "sleep",
     "withTimeout",
   ],
+  [`${pkg.name}/env`]: ["optionalEnv", "parseBoolean", "requireEnv"],
   [`${pkg.name}/errors`]: [
     "TRANSIENT_STATUS_CODES",
     "getErrorMessage",
@@ -35,10 +36,21 @@ const expectedExports = {
   ],
   [`${pkg.name}/files`]: [
     "compressImage",
+    "copyToClipboard",
+    "downloadBlob",
     "downloadUrl",
     "fileDelete",
     "fileExists",
     "formatBytes",
+    "toCSV",
+  ],
+  [`${pkg.name}/number`]: [
+    "formatCurrency",
+    "formatNumber",
+    "formatPercent",
+    "parseLocaleNumber",
+    "percentOf",
+    "toNumber",
   ],
   [`${pkg.name}/youtube`]: [
     "extractYouTubeId",
@@ -75,10 +87,14 @@ const DEPENDENCY_FREE_ENTRIES = [
   "async/index.cjs",
   "date/date-only.js",
   "date/date-only.cjs",
+  "env/index.js",
+  "env/index.cjs",
   "errors/index.js",
   "errors/index.cjs",
   "function/index.js",
   "function/index.cjs",
+  "number/index.js",
+  "number/index.cjs",
   "string/index.js",
   "string/index.cjs",
 ]
@@ -121,6 +137,14 @@ const universalEntries = [
       ),
   },
   {
+    entry: "env/index.cjs",
+    smoke: (m) => {
+      assert.equal(m.parseBoolean("yes"), true)
+      assert.equal(m.requireEnv("A", { env: { A: "x" } }), "x")
+      assert.throws(() => m.requireEnv("A"), { code: "HEROW_ENV_NO_SOURCE" })
+    },
+  },
+  {
     entry: "errors/index.cjs",
     smoke: (m) => {
       assert.equal(m.getErrorMessage({ error: "x" }), "x")
@@ -130,6 +154,14 @@ const universalEntries = [
   {
     entry: "function/index.cjs",
     smoke: (m) => assert.equal(typeof m.debounce(() => {}, 1), "function"),
+  },
+  {
+    entry: "number/index.cjs",
+    smoke: (m) => {
+      assert.equal(m.toNumber("12.5"), 12.5)
+      assert.equal(m.parseLocaleNumber("1.234,56"), 1234.56)
+      assert.match(m.formatCurrency(1234.5), /1\.234,50$/)
+    },
   },
   {
     entry: "string/index.cjs",

@@ -57,15 +57,17 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 
 | Module | What it does | Docs |
 |--------|-------------|------|
-| `/api` | HTTP client with retry, auth tokens, and standardized errors | [docs/api.md](docs/api.md) |
-| `/array` | shuffle, unique | [docs/array.md](docs/array.md) |
+| `/api` | HTTP client with retry, auth tokens, standardized errors, buildQueryString, pagination helpers | [docs/api.md](docs/api.md) |
+| `/array` | shuffle, unique, chunk, sumBy, groupBy, keyBy | [docs/array.md](docs/array.md) |
 | `/async` | sleep, withTimeout, retry (transient-only), backoff, concurrency limiter _(universal)_ | [docs/async.md](docs/async.md) |
 | `/date` | Format, relative time, timezone correction, time-spent parsing, timezone-safe date-only helpers (`toISODate`, `addDaysISO`) | [docs/date.md](docs/date.md) |
+| `/env` | requireEnv, optionalEnv, parseBoolean with injectable source and coded errors _(universal)_ | [docs/env.md](docs/env.md) |
 | `/errors` | getErrorMessage, getErrorStatus, getRootCause, transient-error detection _(universal)_ | [docs/errors.md](docs/errors.md) |
-| `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
-| `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
-| `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
-| `/string` | Case conversion, slugify, removeAccents, normalizeText, truncate, markdownToText, time formatting | [docs/string.md](docs/string.md) |
+| `/files` | Compress images, download URLs/blobs, copy to clipboard, format bytes _(browser + Node)_; toCSV _(universal)_ | [docs/files.md](docs/files.md) |
+| `/function` | debounce, throttle, tryCatch, isBrowser/isServer, safeJsonParse | [docs/function.md](docs/function.md) |
+| `/logger` | Structured logger (Pino on Node, console-based on browser), redactSecrets, redactDeep | [docs/logger.md](docs/logger.md) |
+| `/number` | formatCurrency, formatNumber, formatPercent, percentOf, parseLocaleNumber, toNumber _(universal)_ | [docs/number.md](docs/number.md) |
+| `/string` | Case conversion, slugify, removeAccents, normalizeText, truncate, markdownToText, getInitials, escapeHtml, escapeRegExp, pluralize, time formatting | [docs/string.md](docs/string.md) |
 | `/youtube` | Extract IDs, generate URLs, video info with caching | [docs/youtube.md](docs/youtube.md) |
 
 ---

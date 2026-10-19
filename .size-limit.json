@@ -2,22 +2,22 @@
   {
     "name": "root (ESM)",
     "path": "dist/index.js",
-    "limit": "2.5 kB"
+    "limit": "2.7 kB"
   },
   {
     "name": "/array",
     "path": "dist/array/index.js",
-    "limit": "250 B"
+    "limit": "390 B"
   },
   {
     "name": "/function",
     "path": "dist/function/index.js",
-    "limit": "400 B"
+    "limit": "410 B"
   },
   {
     "name": "/string",
     "path": "dist/string/index.js",
-    "limit": "2 kB"
+    "limit": "2.1 kB"
   },
   {
     "name": "slugify from root",
@@ -66,16 +66,38 @@
   {
     "name": "/files (browser)",
     "path": "dist/files/index.browser.js",
-    "limit": "1.2 kB"
+    "limit": "1.7 kB"
   },
   {
     "name": "/logger (browser)",
     "path": "dist/logger/index.browser.js",
-    "limit": "1.2 kB"
+    "limit": "1.9 kB"
   },
   {
     "name": "/youtube (browser)",
     "path": "dist/youtube/index.browser.js",
     "limit": "5 kB"
+  },
+  {
+    "name": "/number",
+    "path": "dist/number/index.js",
+    "limit": "1.05 kB"
+  },
+  {
+    "name": "formatCurrency from /number",
+    "path": "dist/number/index.js",
+    "import": "{ formatCurrency }",
+    "limit": "335 B"
+  },
+  {
+    "name": "/env",
+    "path": "dist/env/index.js",
+    "limit": "760 B"
+  },
+  {
+    "name": "toCSV from /files (browser)",
+    "path": "dist/files/index.browser.js",
+    "import": "{ toCSV }",
+    "limit": "520 B"
   }
 ]

@@ -57,6 +57,16 @@
         "default": "./dist/date/index.cjs"
       }
     },
+    "./env": {
+      "import": {
+        "types": "./dist/env/index.d.ts",
+        "default": "./dist/env/index.js"
+      },
+      "require": {
+        "types": "./dist/env/index.d.cts",
+        "default": "./dist/env/index.cjs"
+      }
+    },
     "./errors": {
       "import": {
         "types": "./dist/errors/index.d.ts",
@@ -135,6 +145,16 @@
       "require": {
         "types": "./dist/logger/index.d.cts",
         "default": "./dist/logger/index.cjs"
+      }
+    },
+    "./number": {
+      "import": {
+        "types": "./dist/number/index.d.ts",
+        "default": "./dist/number/index.js"
+      },
+      "require": {
+        "types": "./dist/number/index.d.cts",
+        "default": "./dist/number/index.cjs"
       }
     },
     "./string": {

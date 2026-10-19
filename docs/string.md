@@ -11,6 +11,10 @@ import {
   slugify,
   removeAccents,
   normalizeText,
+  getInitials,
+  escapeHtml,
+  escapeRegExp,
+  pluralize,
   truncate,
   toSentenceCase,
   removeHtmlTags,
@@ -117,6 +121,76 @@ Invalid input returns: not applicable, blank input returns `""`.
 ### Replacing a local copy
 
 A local `str.normalize("NFD").replace(/[\u0300-\u036f]/g, "")` is `removeAccents`. Characters outside `[A-Za-z0-9_]` and whitespace (for example CJK) are dropped by `normalizeText`, as `slugify` already does.
+
+### `getInitials(name, options?)`
+
+Uppercase initials of a name: the first letter of the first word and of the last word (so `"Maria da Silva"` is `"MS"`). With `max: 3` the first two words and the last are used.
+
+```typescript
+getInitials('Maria da Silva');                    // → "MS"
+getInitials('madonna');                           // → "M"
+getInitials('Ada King Lovelace', { max: 3 });     // → "AKL"
+getInitials('', { fallback: '?' });               // → "?"
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `max` | `2` | Maximum number of letters |
+| `fallback` | `""` | Returned when the name has no usable word |
+
+Words are split on whitespace and a word's leading punctuation is skipped, so `'"Ada"'` gives `A`. Emoji and symbols are not letters and are skipped. Only the first 1000 characters are read.
+
+Invalid input returns: `fallback` (`null`, `undefined`, empty text, or `max` below 1).
+
+#### Replacing a local copy
+
+Local versions usually take the first two words (`"Maria da"` gives `MD`) and crash on empty strings; this uses first and last word and returns `fallback`.
+
+### `escapeHtml(text)`
+
+Escapes `& < > " '` so text is safe in HTML content and quoted attributes. It escapes text; it does not sanitize HTML (see `removeHtmlTags`).
+
+```typescript
+escapeHtml('<b class="x">Tom & Jerry</b>');
+// → "&lt;b class=&quot;x&quot;&gt;Tom &amp; Jerry&lt;/b&gt;"
+```
+
+Invalid input returns: `""` for non-string input.
+
+#### Replacing a local copy
+
+Local copies often forget `'` (breaking single-quoted attributes) or escape `&` last (double-escaping); this escapes all five in one pass.
+
+### `escapeRegExp(text)`
+
+Escapes regex metacharacters so user input matches literally inside a `RegExp`.
+
+```typescript
+new RegExp(escapeRegExp('1+1=2')).test('1+1=2'); // → true
+escapeRegExp('a.b*c');                           // → "a\\.b\\*c"
+```
+
+Invalid input returns: `""` for non-string input.
+
+#### Replacing a local copy
+
+Same escaping as the MDN snippet `replace(/[.*+?^${}()|[\]\\]/g, '\\$&')`.
+
+### `pluralize(count, singular, plural?)`
+
+Picks `singular` when `count` is 1 or -1 and `plural` otherwise. `plural` defaults to `singular + "s"`. English-style rules only; for other plural categories use `Intl.PluralRules`.
+
+```typescript
+pluralize(1, 'item');            // → "item"
+pluralize(0, 'item');            // → "items"
+pluralize(2, 'mês', 'meses');    // → "meses"
+```
+
+Invalid input returns: the plural form (`NaN` and fractional counts are plural).
+
+#### Replacing a local copy
+
+Replaces `${n} item${n === 1 ? '' : 's'}` ternaries. It returns only the word; build the sentence yourself: `` `${n} ${pluralize(n, 'item')}` ``.
 
 ### `truncate(str, length, suffix?)`
 

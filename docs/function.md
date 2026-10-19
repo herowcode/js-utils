@@ -1,9 +1,16 @@
 # `@herowcode/utils/function`
 
-Control flow utilities: debounce, throttle, and a safe async wrapper.
+Control flow utilities (debounce, throttle, tryCatch), runtime checks and safe JSON parsing.
 
 ```typescript
-import { debounce, throttle, tryCatch } from '@herowcode/utils/function';
+import {
+  debounce,
+  isBrowser,
+  isServer,
+  safeJsonParse,
+  throttle,
+  tryCatch,
+} from '@herowcode/utils/function';
 ```
 
 ---
@@ -60,6 +67,46 @@ const saveChanges = throttle(async (data) => {
 |-----------|------|-------------|
 | `fn` | `(...args: A) => unknown` | The function to throttle; its parameter types carry over to the returned function |
 | `delay` | `number` | Minimum milliseconds between invocations |
+
+---
+
+## `isBrowser()` / `isServer()`
+
+`isBrowser()` is `true` when both `window` and `document` exist; `isServer()` is its negation (Node, edge workers, SSR). Both are functions so they are evaluated at call time and are safe to import in any runtime.
+
+```typescript
+if (isBrowser()) {
+  window.addEventListener('resize', onResize);
+}
+```
+
+Invalid input returns: not applicable (no arguments).
+
+### Replacing a local copy
+
+Replaces `typeof window !== 'undefined'` checks. They do not detect a React Native or web-worker context as a browser.
+
+---
+
+## `safeJsonParse(text, options?)`
+
+`JSON.parse` that never throws.
+
+```typescript
+safeJsonParse<{ page: number }>('{"page":2}');               // → { page: 2 }
+safeJsonParse('{broken', { fallback: { page: 1 } });         // → { page: 1 }
+safeJsonParse(localStorage.getItem('prefs'), { fallback: {} });
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `fallback` | `undefined` | Returned when parsing fails or the input is not a string |
+
+Invalid input returns: `fallback` (malformed JSON, `null`, `undefined`, or any non-string). The type argument is not validated; check the shape with Zod when the source is untrusted.
+
+### Replacing a local copy
+
+Replaces `try { return JSON.parse(x) } catch { return fallback }` helpers. A valid value such as `false`, `0` or `null` is returned as parsed, never replaced by the fallback.
 
 ---
 

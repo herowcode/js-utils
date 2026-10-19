@@ -3,7 +3,7 @@
 HTTP client with retry logic, async auth token injection, and standardized error handling.
 
 ```typescript
-import { apiClient, apiWrapper, buildQueryString } from '@herowcode/utils/api';
+import { apiClient, apiWrapper, buildPageMeta, buildQueryString, getOffset } from '@herowcode/utils/api';
 ```
 
 ---
@@ -106,6 +106,40 @@ Invalid input returns: `""` for an empty or all-nullish `params`. `apiClient` ac
 ### Replacing a local copy
 
 A hand-written `new URLSearchParams(...)` helper maps to `buildQueryString`. Differences: output keeps the leading `?` (and is `""`, not `"?"`, when empty), and arrays become repeated keys instead of `a=1,2`.
+
+---
+
+## `getOffset(page, pageSize)`
+
+Row offset for a 1-based page: `(page - 1) * pageSize`.
+
+```typescript
+getOffset(3, 20); // → 40
+const rows = await db.select().from(users).limit(20).offset(getOffset(page, 20));
+```
+
+Invalid input returns: `0` (page or page size below 1, `NaN`, `Infinity`). Fractions are floored.
+
+### Replacing a local copy
+
+Replaces `(page - 1) * limit`, which goes negative for `page=0` and `NaN` for a missing query param.
+
+---
+
+## `buildPageMeta({ page, pageSize, total })`
+
+Pagination metadata for list responses: `{ page, pageSize, total, totalPages, offset, hasNext, hasPrev }`.
+
+```typescript
+buildPageMeta({ page: 2, pageSize: 10, total: 25 });
+// → { page: 2, pageSize: 10, total: 25, totalPages: 3, offset: 10, hasNext: true, hasPrev: true }
+```
+
+Invalid input returns: clamped values, never `NaN`: `page` and `pageSize` below 1 or not numbers become `1`, an invalid or negative `total` becomes `0` (`totalPages: 0`). A page past the end keeps `hasPrev: true`.
+
+### Replacing a local copy
+
+Replaces hand-built `{ totalPages: Math.ceil(total / limit), hasNext: page * limit < total }` objects; `total: 0` gives `totalPages: 0`, not `1`.
 
 ---
 

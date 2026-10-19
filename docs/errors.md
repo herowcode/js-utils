@@ -106,6 +106,41 @@ Invalid input returns: `false`.
 
 ## Error codes
 
-Errors thrown by this library will carry a stable `HEROW_*` code with a section here; no module throws one yet.
+Errors thrown by this library carry a stable `err.code` starting with `HEROW_`. The message states what happened and how to fix it, ends with a link to the matching section below, and never contains the offending value (it may be a secret). Branch on `err.code`, not on the message text.
+
+## HEROW_ENV_MISSING
+
+Thrown by `requireEnv(name)` when the variable is unset, empty or whitespace-only, or when its value is shorter than `minLength`. The message names the variable, never its value.
+
+Fix: set the variable in the environment (or `.env`) and restart. When the error mentions a minimum length, provide a longer value.
+
+```typescript
+requireEnv('DATABASE_URL');                    // throws HEROW_ENV_MISSING when unset
+requireEnv('SESSION_SECRET', { minLength: 32 }); // throws when shorter than 32 characters
+```
+
+## HEROW_ENV_NO_SOURCE
+
+Thrown by `requireEnv` and `optionalEnv` when the runtime has no environment source: `globalThis.process?.env` is missing (Cloudflare Workers, Deno Deploy, browsers) or you passed `{ env: undefined }`.
+
+Fix: pass the source your runtime provides.
+
+```typescript
+export default {
+  fetch(request, env) {
+    const key = requireEnv('API_KEY', { env }); // Workers bindings
+  },
+};
+```
+
+## HEROW_PARSE_BOOLEAN_INVALID
+
+Thrown by `parseBoolean(value)` (as a `TypeError`) when the value is not one of the recognized strings, `true`/`false` or `1`/`0`, and no `fallback` was given. The value is not echoed.
+
+Fix: normalize the input, or pass a fallback so unknown values never throw.
+
+```typescript
+parseBoolean(process.env.FEATURE_X, false); // "maybe" or undefined gives false
+```
 
 [← Back to README](../README.md)

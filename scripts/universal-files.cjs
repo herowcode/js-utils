@@ -8,4 +8,5 @@ module.exports = [
   "date/iso-date-core",
   "date/parse-iso-date-local",
   "date/to-iso-date",
+  "files/to-csv",
 ]

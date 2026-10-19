@@ -15,7 +15,7 @@ export const DEFAULT_REDACT_PATHS: readonly string[] = [
   "headers.cookie",
 ]
 
-const DEFAULT_REDACT_KEYS = new Set([
+export const DEFAULT_REDACT_KEYS: ReadonlySet<string> = new Set([
   "password",
   "token",
   "apikey",
@@ -24,11 +24,15 @@ const DEFAULT_REDACT_KEYS = new Set([
   "secret",
 ])
 
-const REDACTED = "[REDACTED]"
+export const REDACTED = "[REDACTED]"
 
 export interface IRedactRules {
   keys: Set<string>
   paths: string[][]
+  /** Objects nested deeper than this are replaced by "[MaxDepth]" (fails closed). */
+  maxDepth?: number
+  /** Applied to every string value that is not redacted by key. */
+  redactString?: (text: string) => string
 }
 
 const PATH_SEGMENT = /\[(?:"([^"]*)"|'([^']*)'|([^\]]*))\]|([^.[\]]+)/g
@@ -109,8 +113,14 @@ function walk(
   path: string[],
   ancestors: WeakSet<object>,
 ): unknown {
+  if (typeof value === "string") {
+    return rules.redactString ? rules.redactString(value) : value
+  }
   if (value === null || typeof value !== "object") return value
   if (ancestors.has(value)) return "[Circular]"
+  if (rules.maxDepth !== undefined && path.length > rules.maxDepth) {
+    return "[MaxDepth]"
+  }
 
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString()
