@@ -37,6 +37,46 @@
         "default": "./dist/array/index.cjs"
       }
     },
+    "./async": {
+      "import": {
+        "types": "./dist/async/index.d.ts",
+        "default": "./dist/async/index.js"
+      },
+      "require": {
+        "types": "./dist/async/index.d.cts",
+        "default": "./dist/async/index.cjs"
+      }
+    },
+    "./auth": {
+      "import": {
+        "types": "./dist/auth/index.d.ts",
+        "default": "./dist/auth/index.js"
+      },
+      "require": {
+        "types": "./dist/auth/index.d.cts",
+        "default": "./dist/auth/index.cjs"
+      }
+    },
+    "./br": {
+      "import": {
+        "types": "./dist/br/index.d.ts",
+        "default": "./dist/br/index.js"
+      },
+      "require": {
+        "types": "./dist/br/index.d.cts",
+        "default": "./dist/br/index.cjs"
+      }
+    },
+    "./crypto": {
+      "import": {
+        "types": "./dist/crypto/index.d.ts",
+        "default": "./dist/crypto/index.js"
+      },
+      "require": {
+        "types": "./dist/crypto/index.d.cts",
+        "default": "./dist/crypto/index.cjs"
+      }
+    },
     "./date": {
       "import": {
         "types": "./dist/date/index.d.ts",
@@ -45,6 +85,26 @@
       "require": {
         "types": "./dist/date/index.d.cts",
         "default": "./dist/date/index.cjs"
+      }
+    },
+    "./env": {
+      "import": {
+        "types": "./dist/env/index.d.ts",
+        "default": "./dist/env/index.js"
+      },
+      "require": {
+        "types": "./dist/env/index.d.cts",
+        "default": "./dist/env/index.cjs"
+      }
+    },
+    "./errors": {
+      "import": {
+        "types": "./dist/errors/index.d.ts",
+        "default": "./dist/errors/index.js"
+      },
+      "require": {
+        "types": "./dist/errors/index.d.cts",
+        "default": "./dist/errors/index.cjs"
       }
     },
     "./files": {
@@ -87,6 +147,16 @@
         "default": "./dist/function/index.cjs"
       }
     },
+    "./http": {
+      "import": {
+        "types": "./dist/http/index.d.ts",
+        "default": "./dist/http/index.js"
+      },
+      "require": {
+        "types": "./dist/http/index.d.cts",
+        "default": "./dist/http/index.cjs"
+      }
+    },
     "./logger": {
       "browser": {
         "import": {
@@ -115,6 +185,26 @@
       "require": {
         "types": "./dist/logger/index.d.cts",
         "default": "./dist/logger/index.cjs"
+      }
+    },
+    "./number": {
+      "import": {
+        "types": "./dist/number/index.d.ts",
+        "default": "./dist/number/index.js"
+      },
+      "require": {
+        "types": "./dist/number/index.d.cts",
+        "default": "./dist/number/index.cjs"
+      }
+    },
+    "./phone": {
+      "import": {
+        "types": "./dist/phone/index.d.ts",
+        "default": "./dist/phone/index.js"
+      },
+      "require": {
+        "types": "./dist/phone/index.d.cts",
+        "default": "./dist/phone/index.cjs"
       }
     },
     "./string": {
@@ -172,10 +262,11 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:exports": "node scripts/verify-exports.cjs",
+    "test:exports": "node scripts/verify-universal-source.cjs && node scripts/verify-exports.cjs && node scripts/verify-docs.cjs",
     "test:package": "publint --strict && attw --pack . --profile node16",
     "test:coverage": "vitest run --coverage",
     "size": "size-limit",
+    "docs:index": "node scripts/generate-index.cjs --write",
     "changeset": "changeset",
     "prepublishOnly": "pnpm build && pnpm test:exports"
   },
@@ -208,6 +299,7 @@
     "@arethetypeswrong/cli": "0.18.5",
     "@biomejs/biome": "2.1.4",
     "@changesets/cli": "3.0.3",
+    "@edge-runtime/vm": "5.0.0",
     "@size-limit/preset-small-lib": "14.2.0",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.8.0",

@@ -192,6 +192,61 @@ by context or bindings.
 
 ---
 
+## Redaction helpers: `redactSecrets` and `redactDeep`
+
+Both are exported from `@herowcode/utils/logger` in every runtime and share the logger's redaction core and `"[REDACTED]"` placeholder.
+
+```typescript
+import { redactDeep, redactSecrets } from '@herowcode/utils/logger'
+```
+
+### `redactSecrets(text, options?)`
+
+Masks secrets inside free text: `Authorization`/`Bearer` tokens, JWT-shaped strings, `key=value` and `"key": "value"` pairs whose key is one of the logger's secret keys (`password`, `token`, `apiKey`/`api_key`, `authorization`, `cookie`, `secret`), whole `Cookie:` header lines, passwords inside connection URLs (`postgres://user:pass@host` becomes `postgres://user:[REDACTED]@host`), and common API-key prefixes (`sk-`, `sk_live_`, `ghp_`, `github_pat_`, `xoxb-`, `AKIA`, `AIza`). Keys and quotes are kept; only the value is replaced.
+
+```typescript
+redactSecrets('Authorization: Bearer abc.def')       // → "Authorization: [REDACTED]"
+redactSecrets('retry failed password=hunter2&id=7')  // → "retry failed password=[REDACTED]&id=7"
+redactSecrets('customer CUS-42', { extraPatterns: [/CUS-\d+/] }) // → "customer [REDACTED]"
+```
+
+| Option | Description |
+|--------|-------------|
+| `extraPatterns` | `RegExp` or string (literal) list; every match is replaced. A `RegExp` without the `g` flag is applied globally. You are responsible for keeping your own patterns free of catastrophic backtracking. |
+
+The built-in patterns run in linear time (a 100 KB adversarial input stays under 50 ms in the tests). It is a best-effort scrubber for text you cannot structure; prefer structured context and key-based redaction.
+
+Invalid input returns: `""` for non-string input; text without secrets is returned unchanged.
+
+#### Replacing a local copy
+
+Replaces a hand-rolled `.replace(/Bearer .../)` chain in error reporters. It also covers JWTs and `key=value` pairs that such chains usually miss.
+
+### `redactDeep(value, options?)`
+
+Returns a redacted copy of any value (the input is never mutated). Keys are matched with the logger's rules (default keys at any depth, extra `keys` and paths with the same syntax as the `redact` option), and every string value is passed through `redactSecrets` (plus `patterns`). Like the logger, it turns `Date` into ISO strings, serializes `Error`s and replaces circular references with `"[Circular]"`.
+
+```typescript
+redactDeep({ user: 'ana', password: 'x', note: 'token=abc' })
+// → { user: 'ana', password: '[REDACTED]', note: 'token=[REDACTED]' }
+
+redactDeep(payload, { keys: ['ssn', 'user.card'], patterns: [/CUS-\d+/], maxDepth: 4 })
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `keys` | none | Extra keys/paths to redact |
+| `patterns` | none | Extra patterns for string values |
+| `maxDepth` | `8` | Objects nested deeper than this become `"[MaxDepth]"`, never the raw value |
+
+Invalid input returns: the value itself for primitives (strings are scrubbed); there is no throw path. A 10,000-key object is processed in under 50 ms.
+
+#### Replacing a local copy
+
+Replaces recursive "mask these keys" helpers that miss arrays, cycles and secrets embedded in message strings.
+
+---
+
 ## Python — `templates/python/logger.py`
 
 Copy the file from `templates/python/logger.py` into your project. Stdlib

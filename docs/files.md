@@ -4,13 +4,13 @@ File utilities with conditional browser/Node.js exports. Bundlers and Node.js re
 
 ```typescript
 // Browser environment — gets browser-specific functions
-import { compressImage, downloadUrl, formatBytes } from '@herowcode/utils/files';
+import { compressImage, copyToClipboard, downloadBlob, downloadUrl, formatBytes, safeStorage, toCSV } from '@herowcode/utils/files';
 
 // Node.js environment — gets server-specific functions
 import { fileExists, fileDelete, formatBytes } from '@herowcode/utils/files';
 ```
 
-Both entries export the same names. A function that does not exist in the current runtime throws (or rejects, for async ones) instead of silently doing nothing, e.g. `@herowcode/utils/files: fileExists is not supported in the browser`. This applies to `compressImage` and `downloadUrl` in Node.js and to `fileExists` and `fileDelete` in the browser.
+Both entries export the same names. A function that does not exist in the current runtime throws (or rejects, for async ones) instead of silently doing nothing, e.g. `@herowcode/utils/files: fileExists is not supported in the browser`. This applies to `compressImage`, `copyToClipboard`, `downloadBlob` and `downloadUrl` in Node.js and to `fileExists` and `fileDelete` in the browser.
 
 ---
 
@@ -44,6 +44,36 @@ console.log(compressed.size); // smaller than original
 
 ---
 
+### `copyToClipboard(text)`
+
+Copies text with `navigator.clipboard.writeText`, falling back to a hidden textarea and `document.execCommand("copy")` when the async API is missing or denied (insecure context, some iframes).
+
+```typescript
+if (await copyToClipboard(shareUrl)) {
+  toast('Copied');
+}
+```
+
+Invalid input returns: `false` (never throws) when both paths fail.
+
+#### Replacing a local copy
+
+Local copies typically try only `navigator.clipboard` and throw on HTTP pages; this resolves a boolean you can branch on. Call it from a user gesture (click) or browsers may refuse.
+
+### `downloadBlob(blob, filename)`
+
+Saves a `Blob` as `filename` through a temporary link, removed right away. The object URL is revoked about a second later so the download is not cancelled. `downloadUrl` uses the same code.
+
+```typescript
+downloadBlob(new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' }), 'report.csv');
+```
+
+Invalid input returns: `false` (never throws) when the link cannot be created or clicked; returns `true` otherwise. Unlike `downloadUrl` it does not log.
+
+#### Replacing a local copy
+
+Replaces the `createObjectURL` + anchor + `click()` + `revokeObjectURL` boilerplate; the immediate-revoke variant fails in Safari and Firefox.
+
 ### `downloadUrl(url)`
 
 Triggers a file download in the browser by creating a temporary `<a>` element.
@@ -57,16 +87,87 @@ Returns `false` (and logs the error) on a non-2xx response, a network error, or 
 
 ---
 
-### `formatBytes(bytes)`
+### `formatBytes(bytes, options?)`
 
-Converts a byte count to a human-readable string.
+Converts a byte count to a human-readable string. Throws on a negative size.
 
 ```typescript
-formatBytes(0);          // → "0 Bytes"
-formatBytes(1024);       // → "1 KB"
+formatBytes(0);          // → "0.00 B"
+formatBytes(1024);       // → "1.00 KB"
 formatBytes(1234567);    // → "1.18 MB"
-formatBytes(1073741824); // → "1 GB"
+formatBytes(1500, { base: 1000, decimals: 1 });  // → "1.5 KB"
+formatBytes(1536, { locale: 'pt-BR' });          // → "1,50 KB"
 ```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `decimals` | `2` | Digits after the decimal point |
+| `base` | `1024` | `1024` or `1000` per unit step; unit labels stay `KB`, `MB`, ... |
+| `locale` | none | BCP 47 locale for the number (decimal separator, grouping); without it the number uses `.` |
+
+### `safeStorage(kind?)`
+
+`localStorage` (or `sessionStorage` with `"session"`) that never throws. Blocked storage (Safari private mode, cookies disabled), quota errors and server rendering fall back to an in-memory map that lives as long as the returned object. Every call to `safeStorage()` has its own memory.
+
+```typescript
+const prefs = safeStorage();
+
+prefs.setJSON('prefs', { theme: 'dark' });          // → true (persisted)
+prefs.getJSON('prefs', { fallback: { theme: 'light' } }); // → { theme: 'dark' }
+prefs.get('token');                                  // → string | null
+prefs.remove('token');
+```
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get(key)` | `string \| null` | Stored value, or the in-memory copy when storage failed |
+| `set(key, value)` | `boolean` | `true` when persisted; `false` when the value only fits in memory |
+| `remove(key)` | `void` | Removes from storage and memory |
+| `getJSON(key, { fallback }?)` | `T` / `T \| null` | Parsed value; a missing key or invalid JSON gives `fallback` (default `null`). The invalid raw value is left in storage |
+| `setJSON(key, value)` | `boolean` | `JSON.stringify` then `set`; `false` when the value cannot be serialized or persisted |
+
+Storage is first touched on the first call, inside a `try/catch`, so creating it at module scope is safe in SSR. With no `window` it uses memory, and the same instance switches to real storage once `window` exists. The Node.js entry exports a memory-only version instead of throwing.
+
+Invalid input returns: `get` returns `null`, `getJSON` returns `fallback` (or `null`), `set` and `setJSON` return `false`; nothing throws.
+
+#### Replacing a local copy
+
+Replaces `try { localStorage.getItem(k) } catch {}` wrappers. Check the boolean from `set` when losing the write matters (it survives only until the page closes when `false`).
+
+---
+
+## Universal utilities
+
+`toCSV` works in every runtime (browser, Node, edge) and is exported from both entries.
+
+### `toCSV(rows, options?)`
+
+Serializes rows to CSV following RFC 4180: fields containing the delimiter, a quote, CR or LF are quoted and quotes are doubled. Rows are arrays or plain objects; with objects the header row is the union of keys in first-seen order, and `headers` selects and orders the columns. There is no trailing line break.
+
+```typescript
+toCSV([{ name: 'Ana', note: 'a,b' }, { name: 'Bia', note: null }]);
+// → 'name,note\r\nAna,"a,b"\r\nBia,'
+
+toCSV([[1, 'x']], { headers: ['n', 's'], delimiter: ';', bom: true });
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `headers` | none | Header labels; with object rows also the column keys, in order |
+| `delimiter` | `","` | Field delimiter (use `";"` for Excel in pt-BR) |
+| `eol` | `"\r\n"` | Record separator |
+| `bom` | `false` | Prepend a UTF-8 BOM so Excel detects the encoding |
+| `neutralizeFormulas` | `true` | Spreadsheet formula-injection guard, see below |
+
+**Formula neutralization.** A string cell (or header) starting with `=`, `+`, `-`, `@`, tab or CR gets a leading `'` so spreadsheets do not execute it. `number` and `bigint` values are never touched, and strings matching `^[+-]?\d+(\.\d+)?$` (`"-12.5"`, `"+3"`) are exempt so plain numeric text stays numeric. Formatted pt-BR amounts such as `"-1.234,56"` or `"-R$ 12,50"` do not match, so they get the `'`; pass numbers (or `fromCents` values) instead of formatted strings, or set `neutralizeFormulas: false` for trusted data. Phone numbers like `"+55 11 99999-0000"` also get the prefix.
+
+Cell values: `null` and `undefined` become empty fields, non-finite numbers and invalid dates become empty, dates use `toISOString()`, objects and arrays are JSON-encoded.
+
+Invalid input returns: `""` for no rows (just the header row when `headers` is set); bad cell values become empty fields.
+
+#### Replacing a local copy
+
+Hand-written `rows.map((r) => r.join(','))` breaks on commas, quotes and line breaks and allows `=HYPERLINK(...)` injection. Differences to expect: `CRLF` line endings and the `'` prefix on formula-like text.
 
 ---
 

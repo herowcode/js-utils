@@ -57,14 +57,172 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 
 | Module | What it does | Docs |
 |--------|-------------|------|
-| `/api` | HTTP client with retry, auth tokens, and standardized errors | [docs/api.md](docs/api.md) |
-| `/array` | shuffle, unique | [docs/array.md](docs/array.md) |
-| `/date` | Format, relative time, timezone correction, time-spent parsing | [docs/date.md](docs/date.md) |
-| `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
-| `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
-| `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
-| `/string` | Case conversion, slugify, truncate, markdownToText, time formatting | [docs/string.md](docs/string.md) |
+| `/api` | HTTP client with retry, auth tokens, standardized errors, buildQueryString, pagination helpers | [docs/api.md](docs/api.md) |
+| `/array` | shuffle, unique, chunk, sumBy, groupBy, keyBy | [docs/array.md](docs/array.md) |
+| `/async` | sleep, withTimeout, retry (transient-only), backoff, concurrency limiter, createSingleFlight _(universal)_ | [docs/async.md](docs/async.md) |
+| `/auth` | decodeJWT (unverified), getJWTExp, isJWTExpired, isJWTExpiring, extractBearerToken _(universal)_ | [docs/auth.md](docs/auth.md) |
+| `/br` | formatCEP, formatCPF/isValidCPF, formatCNPJ/isValidCNPJ with check digits (alphanumeric CNPJ included) _(universal)_ | [docs/br.md](docs/br.md) |
+| `/crypto` | sha256Hex, hmacSha256Hex, safeEqual, generateOpaqueToken, verifyHmacSignature over WebCrypto _(universal)_ | [docs/crypto.md](docs/crypto.md) |
+| `/date` | Format, relative time, timezone correction, time-spent parsing, timezone-safe date-only helpers (`toISODate`, `addDaysISO`) | [docs/date.md](docs/date.md) |
+| `/env` | requireEnv, optionalEnv, parseBoolean with injectable source and coded errors _(universal)_ | [docs/env.md](docs/env.md) |
+| `/errors` | getErrorMessage, getErrorStatus, getRootCause, transient-error detection, HttpError family _(universal)_ | [docs/errors.md](docs/errors.md) |
+| `/files` | Compress images, download URLs/blobs, copy to clipboard, format bytes _(browser + Node)_; toCSV _(universal)_ | [docs/files.md](docs/files.md) |
+| `/function` | debounce, throttle, tryCatch, tryCatchResult, isBrowser/isServer, safeJsonParse | [docs/function.md](docs/function.md) |
+| `/http` | corsHeaders, preflight, jsonResponse, fetchWithTimeout, fetchJson over Web Request/Response _(universal)_ | [docs/http.md](docs/http.md) |
+| `/logger` | Structured logger (Pino on Node, console-based on browser), redactSecrets, redactDeep | [docs/logger.md](docs/logger.md) |
+| `/number` | formatCurrency, formatNumber, formatPercent, percentOf, parseLocaleNumber, toNumber _(universal)_ | [docs/number.md](docs/number.md) |
+| `/phone` | onlyDigits, normalizePhone (E.164, BR/US), formatPhone, getBRMobileVariants, buildWhatsAppLink _(universal)_ | [docs/phone.md](docs/phone.md) |
+| `/string` | Case conversion, slugify, removeAccents, normalizeText, truncate, markdownToText, getInitials, escapeHtml, escapeRegExp, pluralize, time formatting | [docs/string.md](docs/string.md) |
 | `/youtube` | Extract IDs, generate URLs, video info with caching | [docs/youtube.md](docs/youtube.md) |
+
+### Which one: `http`, `api` or `async`?
+
+| You need | Use |
+|----------|-----|
+| One request that throws on failure, with a timeout | `http` `fetchJson` |
+| A raw `Response` with a timeout | `http` `fetchWithTimeout` |
+| CORS headers or a preflight answer in a Worker or route handler | `http` `corsHeaders`, `preflight` |
+| A client with base URL, auth tokens, retries and `{ data, error }` results that never throw | [`api`](docs/api.md) `apiClient` |
+| Your own retry loop, timeout signal or concurrency cap around any promise | [`async`](docs/async.md) `retry`, `withTimeout`, `createConcurrencyLimiter` |
+
+### Find a helper (A-Z)
+
+Replacing a home-made helper? See [Replacing a local copy](docs/replacing-local-copies.md) for behavior differences. Regenerate this table with `pnpm build && pnpm docs:index`.
+
+<!-- helper-index:start -->
+| Helper | Import from | Docs |
+|---|---|---|
+| `addDaysISO` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `apiClient` | `@herowcode/utils/api` | [api.md](docs/api.md) |
+| `backoffDelay` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `BadRequestError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `buildPageMeta` | `@herowcode/utils/api` | [api.md](docs/api.md) |
+| `buildQueryString` | `@herowcode/utils/api` | [api.md](docs/api.md) |
+| `buildWhatsAppLink` | `@herowcode/utils/phone` | [phone.md](docs/phone.md) |
+| `camelCase` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `capitalize` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `chunk` | `@herowcode/utils/array` | [array.md](docs/array.md) |
+| `compressImage` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `ConflictError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `copyToClipboard` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `corsHeaders` | `@herowcode/utils/http` | [http.md](docs/http.md) |
+| `createConcurrencyLimiter` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `createLogger` | `@herowcode/utils/logger` | [logger.md](docs/logger.md) |
+| `createPinoInstance` | `@herowcode/utils/logger` | [logger.md](docs/logger.md) |
+| `createSingleFlight` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `dayjs` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `debounce` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `decodeJWT` | `@herowcode/utils/auth` | [auth.md](docs/auth.md) |
+| `diffDaysISO` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `downloadBlob` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `downloadUrl` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `escapeHtml` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `escapeRegExp` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `extractBearerToken` | `@herowcode/utils/auth` | [auth.md](docs/auth.md) |
+| `extractYouTubeId` | `@herowcode/utils/youtube` | [youtube.md](docs/youtube.md) |
+| `fetchJson` | `@herowcode/utils/http` | [http.md](docs/http.md) |
+| `fetchWithTimeout` | `@herowcode/utils/http` | [http.md](docs/http.md) |
+| `fileDelete` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `fileExists` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `fixTimezoneOffset` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `ForbiddenError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `formatBytes` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `formatCEP` | `@herowcode/utils/br` | [br.md](docs/br.md) |
+| `formatCNPJ` | `@herowcode/utils/br` | [br.md](docs/br.md) |
+| `formatCPF` | `@herowcode/utils/br` | [br.md](docs/br.md) |
+| `formatCurrency` | `@herowcode/utils/number` | [number.md](docs/number.md) |
+| `formatDate` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `formatHMSToSeconds` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `formatNumber` | `@herowcode/utils/number` | [number.md](docs/number.md) |
+| `formatPercent` | `@herowcode/utils/number` | [number.md](docs/number.md) |
+| `formatPhone` | `@herowcode/utils/phone` | [phone.md](docs/phone.md) |
+| `formatSecondsToFragment` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `formatSecondsToHMS` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `formatStringToTime` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `generateOpaqueToken` | `@herowcode/utils/crypto` | [crypto.md](docs/crypto.md) |
+| `generateYoutubeURL` | `@herowcode/utils/youtube` | [youtube.md](docs/youtube.md) |
+| `getBRMobileVariants` | `@herowcode/utils/phone` | [phone.md](docs/phone.md) |
+| `getCurrentDateInUTC` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `getDateInUTC` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `getDatePartsInTimeZone` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `getDayjsGlobalIntl` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `getErrorMessage` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `getErrorStatus` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `getInitials` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `getJWTExp` | `@herowcode/utils/auth` | [auth.md](docs/auth.md) |
+| `getOffset` | `@herowcode/utils/api` | [api.md](docs/api.md) |
+| `getRelativeTime` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `getRootCause` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `getTodayISODate` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `getYoutubeThumbnail` | `@herowcode/utils/youtube` | [youtube.md](docs/youtube.md) |
+| `getYoutubeVideoDuration` | `@herowcode/utils/youtube` | [youtube.md](docs/youtube.md) |
+| `getYoutubeVideoInfo` | `@herowcode/utils/youtube` | [youtube.md](docs/youtube.md) |
+| `getZonedHour` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `groupBy` | `@herowcode/utils/array` | [array.md](docs/array.md) |
+| `hmacSha256Hex` | `@herowcode/utils/crypto` | [crypto.md](docs/crypto.md) |
+| `HttpError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `isBrowser` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `isHttpError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `isJWTExpired` | `@herowcode/utils/auth` | [auth.md](docs/auth.md) |
+| `isJWTExpiring` | `@herowcode/utils/auth` | [auth.md](docs/auth.md) |
+| `isServer` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `isTransientNetworkError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `isTransientStatus` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `isValidCNPJ` | `@herowcode/utils/br` | [br.md](docs/br.md) |
+| `isValidCPF` | `@herowcode/utils/br` | [br.md](docs/br.md) |
+| `jsonResponse` | `@herowcode/utils/http` | [http.md](docs/http.md) |
+| `kebabCase` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `keyBy` | `@herowcode/utils/array` | [array.md](docs/array.md) |
+| `mapInChunks` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `markdownToText` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `normalizePhone` | `@herowcode/utils/phone` | [phone.md](docs/phone.md) |
+| `normalizeText` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `NotFoundError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `onlyDigits` | `@herowcode/utils/phone` | [phone.md](docs/phone.md) |
+| `optionalEnv` | `@herowcode/utils/env` | [env.md](docs/env.md) |
+| `parseBoolean` | `@herowcode/utils/env` | [env.md](docs/env.md) |
+| `parseISODateLocal` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `parseLocaleNumber` | `@herowcode/utils/number` | [number.md](docs/number.md) |
+| `parseRetryAfterMs` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `parseTimeSpent` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `percentOf` | `@herowcode/utils/number` | [number.md](docs/number.md) |
+| `pluralize` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `preflight` | `@herowcode/utils/http` | [http.md](docs/http.md) |
+| `redactDeep` | `@herowcode/utils/logger` | [logger.md](docs/logger.md) |
+| `redactSecrets` | `@herowcode/utils/logger` | [logger.md](docs/logger.md) |
+| `removeAccents` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `removeHtmlTags` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `requireEnv` | `@herowcode/utils/env` | [env.md](docs/env.md) |
+| `resetDayjsGlobalIntl` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `resolveDayjsIntlConfig` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `retry` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `safeEqual` | `@herowcode/utils/crypto` | [crypto.md](docs/crypto.md) |
+| `safeJsonParse` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `safeStorage` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `setDayjsGlobalIntl` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `sha256Hex` | `@herowcode/utils/crypto` | [crypto.md](docs/crypto.md) |
+| `shuffle` | `@herowcode/utils/array` | [array.md](docs/array.md) |
+| `sleep` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+| `slugify` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `snakeCase` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `sumBy` | `@herowcode/utils/array` | [array.md](docs/array.md) |
+| `throttle` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `toCSV` | `@herowcode/utils/files` | [files.md](docs/files.md) |
+| `toISODate` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `toNumber` | `@herowcode/utils/number` | [number.md](docs/number.md) |
+| `TooManyRequestsError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `toSentenceCase` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `TRANSIENT_STATUS_CODES` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `truncate` | `@herowcode/utils/string` | [string.md](docs/string.md) |
+| `tryCatch` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `tryCatchResult` | `@herowcode/utils/function` | [function.md](docs/function.md) |
+| `UnauthorizedError` | `@herowcode/utils/errors` | [errors.md](docs/errors.md) |
+| `unique` | `@herowcode/utils/array` | [array.md](docs/array.md) |
+| `validateYoutubeLink` | `@herowcode/utils/youtube` | [youtube.md](docs/youtube.md) |
+| `verifyHmacSignature` | `@herowcode/utils/crypto` | [crypto.md](docs/crypto.md) |
+| `withDayjsGlobalIntl` | `@herowcode/utils/date` | [date.md](docs/date.md) |
+| `withTimeout` | `@herowcode/utils/async` | [async.md](docs/async.md) |
+<!-- helper-index:end -->
 
 ---
 
@@ -109,7 +267,7 @@ The root entry only re-exports the dependency-free modules (`array`, `function`,
 import { capitalize, debounce, shuffle } from '@herowcode/utils';
 ```
 
-`api`, `date`, `files`, `logger` and `youtube` are subpath-only. Upgrading from 1.x? See [CHANGELOG.md](CHANGELOG.md) for the 2.0 migration notes.
+Every other module (`api`, `async`, `auth`, `br`, `crypto`, `date`, `env`, `errors`, `files`, `http`, `logger`, `number`, `phone` and `youtube`) is subpath-only. Upgrading from 1.x? See [CHANGELOG.md](CHANGELOG.md) for the 2.0 migration notes.
 
 ---
 
@@ -156,6 +314,8 @@ pnpm check            # Biome check + tsc --noEmit (read-only)
 pnpm lint             # Same, but Biome rewrites files
 pnpm test:package     # publint + arethetypeswrong on the packed tarball
 pnpm size             # Bundle-size limits per entry
+pnpm docs:index       # Rewrite the A-Z helper index in both READMEs (run after pnpm build)
+pnpm docs:index       # Rewrite the A-Z helper index in both READMEs (after pnpm build)
 ```
 
 Run a single test file:

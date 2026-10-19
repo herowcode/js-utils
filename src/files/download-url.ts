@@ -1,10 +1,6 @@
-const REVOKE_DELAY_MS = 1000
+import { triggerBlobDownload } from "./trigger-blob-download"
 
 export const downloadUrl = async (url: string): Promise<boolean> => {
-  let link: HTMLAnchorElement | undefined
-  let appended = false
-  let objectUrl: string | undefined
-
   try {
     const urlObj = new URL(url)
     const segments = urlObj.pathname
@@ -23,26 +19,10 @@ export const downloadUrl = async (url: string): Promise<boolean> => {
     }
     const blob = await response.blob()
 
-    objectUrl = window.URL.createObjectURL(blob)
-    link = document.createElement("a")
-    link.href = objectUrl
-    link.download = filename
-    document.body.appendChild(link)
-    appended = true
-    link.click()
+    triggerBlobDownload(blob, filename)
     return true
   } catch (error) {
     console.error("Error downloading the file", error)
     return false
-  } finally {
-    try {
-      if (link && appended) document.body.removeChild(link)
-    } catch {
-      // The anchor was already detached; the download outcome stands
-    }
-    // Revoking in the same tick can cancel the download in Safari and Firefox
-    const pending = objectUrl
-    if (pending)
-      setTimeout(() => window.URL.revokeObjectURL(pending), REVOKE_DELAY_MS)
   }
 }

@@ -1,3 +1,4 @@
+import { parseRetryAfterMs } from "../async"
 import type { TTryCatchResult } from "../function"
 
 // Define a richer error type to capture more information
@@ -10,6 +11,8 @@ export interface IApiError {
   details?: unknown
   path?: string
   timestamp?: string
+  /** Seconds to wait, from the response's Retry-After header (seconds or HTTP date); absent when missing or invalid. */
+  retryAfterSeconds?: number
 }
 
 const MAX_TEXT_LENGTH = 200
@@ -106,6 +109,15 @@ function extractStandardErrorDetails(error: Error): IApiError {
   return errorObj
 }
 
+function readRetryAfter(response: Response): string | null {
+  try {
+    return response.headers.get("Retry-After")
+  } catch {
+    // Response-like stand-ins may not expose real headers
+    return null
+  }
+}
+
 /**
  * Extracts error properties from fetch Response objects
  */
@@ -116,6 +128,10 @@ async function extractResponseErrorDetails(
     message: `HTTP Error ${response.status}: ${response.statusText}`,
     status: response.status,
     path: response.url,
+  }
+  const retryAfterMs = parseRetryAfterMs(readRetryAfter(response))
+  if (retryAfterMs !== undefined) {
+    errorObj.retryAfterSeconds = Math.ceil(retryAfterMs / 1000)
   }
 
   try {

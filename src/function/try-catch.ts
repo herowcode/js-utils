@@ -8,6 +8,8 @@ export type TTryCatchResult<T, E = Error, D = null> =
 /**
  * Enhanced try-catch utility that handles async operations and provides typed results
  *
+ * See `tryCatchResult` for a discriminated `{ ok }` shape; docs/function.md compares the shapes.
+ *
  * @param fn - The promise or function returning a promise to execute
  * @param defaultData - Optional default value to use for data when an error occurs (instead of null)
  * @returns A consistent result object containing either data or error

@@ -15,20 +15,31 @@ export const DEFAULT_REDACT_PATHS: readonly string[] = [
   "headers.cookie",
 ]
 
-const DEFAULT_REDACT_KEYS = new Set([
+export const DEFAULT_REDACT_KEYS: ReadonlySet<string> = new Set([
   "password",
   "token",
   "apikey",
   "authorization",
   "cookie",
   "secret",
+  "passwd",
+  "refreshtoken",
+  "accesstoken",
+  "privatekey",
+  "setcookie",
+  "xapikey",
+  "clientsecret",
 ])
 
-const REDACTED = "[REDACTED]"
+export const REDACTED = "[REDACTED]"
 
 export interface IRedactRules {
   keys: Set<string>
   paths: string[][]
+  /** Objects nested deeper than this are replaced by "[MaxDepth]" (fails closed). */
+  maxDepth?: number
+  /** Applied to every string value that is not redacted by key. */
+  redactString?: (text: string) => string
 }
 
 const PATH_SEGMENT = /\[(?:"([^"]*)"|'([^']*)'|([^\]]*))\]|([^.[\]]+)/g
@@ -60,7 +71,12 @@ export function browserRedact<T>(value: T, extra?: readonly string[]): T {
 
 // Path segments are lowercased when built, matching the compiled rules
 function isRedacted(rules: IRedactRules, path: string[]): boolean {
-  if (rules.keys.has(path[path.length - 1])) return true
+  const last = path[path.length - 1]
+  if (rules.keys.has(last)) return true
+  // camelCase, snake_case and kebab-case variants: `refresh_token`, `x-api-key`, `userPassword`
+  const flat = last.replace(/[_.-]/g, "")
+  if (rules.keys.has(flat)) return true
+  for (const key of DEFAULT_REDACT_KEYS) if (flat.endsWith(key)) return true
   return rules.paths.some(
     (pattern) =>
       pattern.length === path.length &&
@@ -89,7 +105,13 @@ function walkEntries(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [k, v] of entries) {
-    out[k] = walkChild(k, v, rules, path, ancestors)
+    // defineProperty keeps a "__proto__" key as data instead of setting the prototype
+    Object.defineProperty(out, k, {
+      value: walkChild(k, v, rules, path, ancestors),
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    })
   }
   return out
 }
@@ -109,8 +131,14 @@ function walk(
   path: string[],
   ancestors: WeakSet<object>,
 ): unknown {
+  if (typeof value === "string") {
+    return rules.redactString ? rules.redactString(value) : value
+  }
   if (value === null || typeof value !== "object") return value
   if (ancestors.has(value)) return "[Circular]"
+  if (rules.maxDepth !== undefined && path.length > rules.maxDepth) {
+    return "[MaxDepth]"
+  }
 
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString()

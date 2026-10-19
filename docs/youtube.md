@@ -29,6 +29,12 @@ extractYouTubeId('not-a-youtube-url');                               // → null
 extractYouTubeId(null);                                              // → null
 ```
 
+Invalid input returns: `null` (not a YouTube host, no 11-character ID, or a non-string).
+
+### Replacing a local copy
+
+Local `/(?:v=|youtu\.be\/)([\w-]{11})/` patterns accept look-alike hosts such as `evilyoutube.com` and miss `/shorts/` and `/live/` links. This checks the host first.
+
 ---
 
 ## `generateYoutubeURL(options)`

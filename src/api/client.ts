@@ -1,3 +1,7 @@
+import { backoffDelay, parseRetryAfterMs, sleep, withTimeout } from "../async"
+import { MAX_TIMER_DELAY } from "../async/timer-delay"
+import { TRANSIENT_STATUS_CODES } from "../errors"
+import { buildQueryString, type TQueryParams } from "./build-query-string"
 import { apiWrapper } from "./wrapper"
 
 export interface IRetryOptions {
@@ -11,7 +15,7 @@ export interface IRetryOptions {
 
 export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
   json?: unknown
-  params?: Record<string, string | number | boolean | null | undefined>
+  params?: TQueryParams
   /** Total time in ms for the request, retries and backoff included. */
   timeout?: number
   retry?: IRetryOptions
@@ -20,30 +24,14 @@ export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
 const defaultRetryConfig: Required<IRetryOptions> = {
   limit: 5,
   methods: ["get", "head"],
-  statusCodes: [408, 429, 500, 502, 503, 504],
+  statusCodes: TRANSIENT_STATUS_CODES,
   backoffLimit: 3000,
   maxRetryAfter: 10_000,
 }
 
 const MAX_RETRY_LIMIT = 10
 // setTimeout fires immediately for delays above 2^31-1 ms
-const MAX_TIMER_DELAY = 2 ** 31 - 1
 const MAX_BODY_SNIPPET = 200
-
-function buildQueryString(
-  params: Record<string, string | number | boolean | null | undefined>,
-): string {
-  const searchParams = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== null && value !== undefined) {
-      searchParams.append(key, String(value))
-    }
-  })
-
-  const queryString = searchParams.toString()
-  return queryString ? `?${queryString}` : ""
-}
 
 // Callbacks can't be cancelled, so stop waiting for them once the request aborts
 function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -178,66 +166,25 @@ async function fetchWithRetry(
     } catch (error) {
       const aborted = (error as { name?: string } | null)?.name === "AbortError"
       if (!canRetry || aborted || request.signal.aborted) throw error
-      await sleep(backoffDelay(attempt, backoffLimit), request.signal)
+      await sleep(
+        backoffDelay(attempt, { baseMs: 100, maxMs: backoffLimit }),
+        request.signal,
+      )
       continue
     }
 
     if (!canRetry || !statusCodes.includes(response.status)) return response
 
-    const retryAfter = parseRetryAfter(response.headers.get("Retry-After"))
+    const retryAfter = parseRetryAfterMs(response.headers.get("Retry-After"))
 
     await discardBody(response)
     await sleep(
       retryAfter === undefined
-        ? backoffDelay(attempt, backoffLimit)
+        ? backoffDelay(attempt, { baseMs: 100, maxMs: backoffLimit })
         : Math.min(retryAfter, maxRetryAfter),
       request.signal,
     )
   }
-}
-
-// Equal jitter: spreads concurrent retries without dropping below half the backoff
-function backoffDelay(attempt: number, backoffLimit: number): number {
-  const base = Math.min(2 ** attempt * 100, backoffLimit)
-  return base / 2 + Math.random() * (base / 2)
-}
-
-function parseRetryAfter(value: string | null): number | undefined {
-  if (value === null) return undefined
-  const trimmed = value.trim()
-  if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1000
-  // Date.parse accepts "1.5" or "-1" as dates; only real HTTP dates go through it
-  if (/^[+-]?[\d.]+$/.test(trimmed)) return undefined
-  const date = Date.parse(trimmed)
-  if (Number.isNaN(date)) return undefined
-  return Math.max(date - Date.now(), 0)
-}
-
-function sleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) return reject(signal.reason)
-    const onAbort = () => {
-      clearTimeout(timer)
-      reject(signal.reason)
-    }
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", onAbort)
-      resolve()
-    }, ms)
-    signal.addEventListener("abort", onAbort, { once: true })
-  })
-}
-
-function withTimeout(
-  signal: AbortSignal | null | undefined,
-  timeout: number | undefined,
-): AbortSignal | null | undefined {
-  // 0, negative and non-finite values mean no timeout; 0 lets a request opt out of the client default
-  if (timeout === undefined || !Number.isFinite(timeout) || timeout <= 0) {
-    return signal
-  }
-  const timeoutSignal = AbortSignal.timeout(Math.ceil(timeout))
-  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
 }
 
 export type TApiClientProps = {

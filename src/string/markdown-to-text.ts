@@ -1,4 +1,18 @@
-export function markdownToText(markdown: string): string {
+export interface IMarkdownToTextOptions {
+  /** Keeps link targets as "text (url)" instead of dropping them. */
+  keepLinkUrls?: boolean
+  /** Joins everything into one line separated by single spaces. */
+  singleLine?: boolean
+}
+
+/**
+ * Converts Markdown to plain text.
+ * @example markdownToText("[docs](https://x.dev)", { keepLinkUrls: true }) // "docs (https://x.dev)"
+ */
+export function markdownToText(
+  markdown: string,
+  options?: IMarkdownToTextOptions,
+): string {
   if (!markdown) return ""
 
   // normalize newlines
@@ -17,7 +31,13 @@ export function markdownToText(markdown: string): string {
   text = text.replace(/!\[([^\]]*)\]\((?:[^)]+)\)/g, "$1")
 
   // Links: keep link text
-  text = text.replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, "$1")
+  text = text.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (_, label: string, target: string) =>
+      options?.keepLinkUrls
+        ? `${label} (${target.trim().split(/\s/)[0]})`
+        : label,
+  )
 
   // Reference-style links: [text][id] -> text
   text = text.replace(/\[([^\]]+)\]\s*\[[^\]]*\]/g, "$1")
@@ -89,5 +109,6 @@ export function markdownToText(markdown: string): string {
   text = text.replace(/\n{3,}/g, "\n\n")
 
   // Final trim but preserve leading/trailing single newlines inside content as needed
-  return text.trim()
+  text = text.trim()
+  return options?.singleLine ? text.replace(/\s+/g, " ") : text
 }
