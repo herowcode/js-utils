@@ -2,6 +2,7 @@ const assert = require("node:assert/strict")
 const { spawnSync } = require("node:child_process")
 const fs = require("node:fs")
 const path = require("node:path")
+const { pathToFileURL } = require("node:url")
 
 const ROOT = path.resolve(__dirname, "..")
 const DIST = path.join(ROOT, "dist")
@@ -19,18 +20,41 @@ const expectedExports = {
   [`${pkg.name}/async`]: [
     "backoffDelay",
     "createConcurrencyLimiter",
+    "createSingleFlight",
     "mapInChunks",
     "parseRetryAfterMs",
     "retry",
     "sleep",
     "withTimeout",
   ],
+  [`${pkg.name}/auth`]: [
+    "decodeJWT",
+    "extractBearerToken",
+    "getJWTExp",
+    "isJWTExpired",
+    "isJWTExpiring",
+  ],
+  [`${pkg.name}/crypto`]: [
+    "generateOpaqueToken",
+    "hmacSha256Hex",
+    "safeEqual",
+    "sha256Hex",
+    "verifyHmacSignature",
+  ],
   [`${pkg.name}/env`]: ["optionalEnv", "parseBoolean", "requireEnv"],
   [`${pkg.name}/errors`]: [
+    "BadRequestError",
+    "ConflictError",
+    "ForbiddenError",
+    "HttpError",
+    "NotFoundError",
     "TRANSIENT_STATUS_CODES",
+    "TooManyRequestsError",
+    "UnauthorizedError",
     "getErrorMessage",
     "getErrorStatus",
     "getRootCause",
+    "isHttpError",
     "isTransientNetworkError",
     "isTransientStatus",
   ],
@@ -86,6 +110,10 @@ const DEPENDENCY_FREE_ENTRIES = [
   "array/index.cjs",
   "async/index.js",
   "async/index.cjs",
+  "auth/index.js",
+  "auth/index.cjs",
+  "crypto/index.js",
+  "crypto/index.cjs",
   "date/date-only.js",
   "date/date-only.cjs",
   "env/index.js",
@@ -125,7 +153,38 @@ const universalEntries = [
   },
   {
     entry: "async/index.cjs",
-    smoke: (m) => assert.equal(m.parseRetryAfterMs("2"), 2000),
+    smoke: async (m) => {
+      assert.equal(m.parseRetryAfterMs("2"), 2000)
+      const run = m.createSingleFlight(async () => 1)
+      assert.equal(await run(), 1)
+    },
+  },
+  {
+    entry: "auth/index.cjs",
+    smoke: (m) => {
+      const token = `e30.${btoa('{"exp":1}')}.s`
+      assert.equal(m.getJWTExp(token), 1)
+      assert.equal(m.isJWTExpired(token), true)
+      assert.equal(m.extractBearerToken("Bearer abc"), "abc")
+    },
+  },
+  {
+    entry: "crypto/index.cjs",
+    smoke: async (m) => {
+      assert.equal(m.safeEqual("a", "a"), true)
+      assert.equal(
+        await m.sha256Hex("abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      )
+      assert.equal(
+        await m.verifyHmacSignature(
+          "what do ya want for nothing?",
+          "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+          "Jefe",
+        ),
+        true,
+      )
+    },
   },
   {
     entry: "date/date-only.cjs",
@@ -150,6 +209,7 @@ const universalEntries = [
     smoke: (m) => {
       assert.equal(m.getErrorMessage({ error: "x" }), "x")
       assert.equal(m.isTransientStatus(503), true)
+      assert.equal(m.isHttpError(new m.NotFoundError()), true)
     },
   },
   {
@@ -170,17 +230,42 @@ const universalEntries = [
   },
 ]
 
-for (const { entry, smoke } of universalEntries) {
-  try {
-    smoke(loadInEdgeVM(path.join(DIST, entry)))
-  } catch (error) {
-    throw new Error(`dist/${entry} failed in EdgeVM: ${error.message}`, {
-      cause: error,
-    })
+async function main() {
+  for (const { entry, smoke } of universalEntries) {
+    try {
+      await smoke(loadInEdgeVM(path.join(DIST, entry)))
+    } catch (error) {
+      throw new Error(`dist/${entry} failed in EdgeVM: ${error.message}`, {
+        cause: error,
+      })
+    }
   }
+
+  await assertHttpErrorCrossBundle()
+  console.log("✔ built package exports verified")
 }
 
-console.log("✔ built package exports verified")
+// The CJS and ESM builds are two distinct HttpError classes; the brand must make them recognise each other.
+async function assertHttpErrorCrossBundle() {
+  const cjs = require(path.join(DIST, "errors/index.cjs"))
+  const esm = await import(
+    pathToFileURL(path.join(DIST, "errors/index.js")).href
+  )
+  assert.notEqual(cjs.HttpError, esm.HttpError)
+  const fromCjs = new cjs.NotFoundError("x")
+  const fromEsm = new esm.TooManyRequestsError("y", { retryAfterSeconds: 3 })
+  assert.ok(fromCjs instanceof esm.HttpError)
+  assert.ok(fromCjs instanceof esm.NotFoundError)
+  assert.ok(!(fromCjs instanceof esm.ConflictError))
+  assert.ok(fromEsm instanceof cjs.TooManyRequestsError)
+  assert.ok(esm.isHttpError(fromCjs) && cjs.isHttpError(fromEsm))
+  assert.equal(esm.getErrorStatus(fromCjs), 404)
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})
 
 function loadInEdgeVM(entryFile) {
   const { EdgeVM } = require("@edge-runtime/vm")

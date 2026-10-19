@@ -6,6 +6,7 @@ Timing, retry and concurrency helpers. Universal: no Node builtins, works in bro
 import {
   backoffDelay,
   createConcurrencyLimiter,
+  createSingleFlight,
   mapInChunks,
   parseRetryAfterMs,
   retry,
@@ -126,5 +127,26 @@ const pages = await Promise.all(urls.map((url) => limit(() => fetch(url))));
 ```
 
 Invalid input returns: a `limit` below 1 or `NaN` is treated as 1.
+
+---
+
+## `createSingleFlight(fn)`
+
+Wraps `fn` so that calls made while it is running share the same promise instead of starting another run. As soon as the run settles, the slot is cleared (before any waiter resumes), so the next call starts a fresh run. A rejection reaches every waiter and is not cached.
+
+```typescript
+const refreshToken = createSingleFlight(() => api.refresh());
+
+// Three requests hit a 401 at once: one refresh call, three identical results
+const [a, b, c] = await Promise.all([refreshToken(), refreshToken(), refreshToken()]);
+```
+
+Calls that join a running flight ignore their own arguments: `fn` runs with the arguments of the call that started it. A synchronous throw from `fn` becomes a rejection.
+
+Invalid input returns: not applicable, errors from `fn` reject the returned promise.
+
+### Replacing a local copy
+
+A local `let inflight` guard usually forgets to clear on rejection or clears too late. This clears in the settle handler, so a failed refresh can be retried on the next call.
 
 [← Back to README](../README.md)

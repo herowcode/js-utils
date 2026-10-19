@@ -1,12 +1,15 @@
 # `@herowcode/utils/errors`
 
-Read messages, statuses and root causes from unknown thrown values, and tell transient failures from permanent ones. Universal: no Node builtins, works in browsers, Node and edge runtimes.
+Read messages, statuses and root causes from unknown thrown values, tell transient failures from permanent ones, and throw typed HTTP errors. Universal: no Node builtins, works in browsers, Node and edge runtimes.
 
 ```typescript
 import {
   getErrorMessage,
   getErrorStatus,
   getRootCause,
+  isHttpError,
+  HttpError,
+  NotFoundError,
   isTransientNetworkError,
   isTransientStatus,
   TRANSIENT_STATUS_CODES,
@@ -104,6 +107,44 @@ Invalid input returns: `false`.
 
 ---
 
+## `HttpError` and subclasses
+
+An `Error` that carries an HTTP `status`. Subclasses fix the status: `BadRequestError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ConflictError` (409) and `TooManyRequestsError` (429).
+
+```typescript
+throw new HttpError(502, 'Bad gateway', { code: 'UPSTREAM_DOWN', details: { upstream: 'billing' }, cause: err });
+throw new NotFoundError('User not found');
+throw new TooManyRequestsError('Slow down', { retryAfterSeconds: 30 });
+```
+
+| Field | Description |
+|-------|-------------|
+| `status` | HTTP status number (the same name as `Response.status` and `IApiError.status`) |
+| `code` | Optional machine-readable code from the server or your app |
+| `details` | Optional extra payload, e.g. validation issues |
+| `retryAfterSeconds` | `TooManyRequestsError` only; [`retry`](async.md#retryfn-options) waits that long |
+| `cause` | Standard `Error` cause |
+
+Subclass constructors are `(message?, options?)`, with a default message ("Not Found", ...). `HttpError` itself is `(status, message?, options?)`, default message `HTTP <status>`.
+
+### `isHttpError(value)`
+
+Type guard for the whole family. Prefer it, or plain `instanceof`, whenever one process can load this package twice (CJS and ESM builds, duplicated installs, bundled copies). Every instance carries the brand `Symbol.for("@herowcode/utils.HttpError")`, and `HttpError[Symbol.hasInstance]` checks it, so `err instanceof NotFoundError` stays true for an error created by the other copy. Your own subclasses of `HttpError` use the normal prototype check.
+
+```typescript
+if (isHttpError(err) && err.status === 404) return null;
+```
+
+`getErrorStatus` reads `HttpError.status`, `getErrorMessage` reads its message, and `retry` treats a 429/5xx `HttpError` as transient and honours `retryAfterSeconds`.
+
+Invalid input returns: `false`.
+
+### Replacing a local copy
+
+Local `class HttpError { statusCode }` copies break `instanceof` across bundles and name the field `statusCode`. Rename the field to `status` and delete the class; `getErrorStatus` still reads `statusCode` from errors you do not control.
+
+---
+
 ## Error codes
 
 Errors thrown by this library carry a stable `err.code` starting with `HEROW_`. The message states what happened and how to fix it, ends with a link to the matching section below, and never contains the offending value (it may be a secret). Branch on `err.code`, not on the message text.
@@ -141,6 +182,27 @@ Fix: normalize the input, or pass a fallback so unknown values never throw.
 
 ```typescript
 parseBoolean(process.env.FEATURE_X, false); // "maybe" or undefined gives false
+```
+
+## HEROW_CRYPTO_UNAVAILABLE
+
+Thrown (as a rejected promise) by `sha256Hex`, `hmacSha256Hex`, `verifyHmacSignature` and `generateOpaqueToken` when `globalThis.crypto.subtle` does not exist.
+
+Fix: run on Node 20+, an edge runtime, or a browser over HTTPS (browsers hide `crypto.subtle` on insecure origins).
+
+```typescript
+await sha256Hex('x'); // rejects with HEROW_CRYPTO_UNAVAILABLE where WebCrypto is missing
+```
+
+## HEROW_CRYPTO_INVALID_BYTES
+
+Thrown (as a `RangeError`, in a rejected promise) by `generateOpaqueToken(bytes)` when `bytes` is not a whole number from 1 to 65536.
+
+Fix: pass an integer byte count; use 16 or more for session tokens.
+
+```typescript
+await generateOpaqueToken(0); // rejects with HEROW_CRYPTO_INVALID_BYTES
+await generateOpaqueToken();  // 32 bytes, the default
 ```
 
 [← Back to README](../README.md)

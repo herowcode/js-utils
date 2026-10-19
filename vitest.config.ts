@@ -46,6 +46,14 @@ export default defineConfig({
           exclude: ["**/console-logger.bundled.test.ts", "node_modules/**"],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["src/crypto/**/*.test.ts"],
+        },
+      },
     ],
   },
 })

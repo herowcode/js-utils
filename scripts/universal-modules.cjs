@@ -2,6 +2,8 @@
 module.exports = [
   "array",
   "async",
+  "auth",
+  "crypto",
   "env",
   "errors",
   "function",

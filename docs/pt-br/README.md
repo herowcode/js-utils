@@ -59,10 +59,12 @@ Projetado, construído e mantido por [Judson Cairo](https://judsoncairo.com) com
 |--------|-----------|------|
 | `/api` | Cliente HTTP com retry, tokens de auth, erros padronizados, buildQueryString, helpers de paginação | [docs/api.md](../api.md) |
 | `/array` | shuffle, unique, chunk, sumBy, groupBy, keyBy | [docs/array.md](../array.md) |
-| `/async` | sleep, withTimeout, retry (somente transitórios), backoff, limitador de concorrência _(universal)_ | [docs/async.md](../async.md) |
+| `/async` | sleep, withTimeout, retry (somente transitórios), backoff, limitador de concorrência, createSingleFlight _(universal)_ | [docs/async.md](../async.md) |
+| `/auth` | decodeJWT (sem verificar assinatura), getJWTExp, isJWTExpired, isJWTExpiring, extractBearerToken _(universal)_ | [docs/auth.md](../auth.md) |
+| `/crypto` | sha256Hex, hmacSha256Hex, safeEqual, generateOpaqueToken, verifyHmacSignature sobre WebCrypto _(universal)_ | [docs/crypto.md](../crypto.md) |
 | `/date` | Formatação, tempo relativo, timezone, tempo gasto, helpers de data (YYYY-MM-DD) com timezone (`toISODate`, `addDaysISO`) | [docs/date.md](../date.md) |
 | `/env` | requireEnv, optionalEnv, parseBoolean com fonte injetável e erros com código _(universal)_ | [docs/env.md](../env.md) |
-| `/errors` | getErrorMessage, getErrorStatus, getRootCause, detecção de erros transitórios _(universal)_ | [docs/errors.md](../errors.md) |
+| `/errors` | getErrorMessage, getErrorStatus, getRootCause, detecção de erros transitórios, família HttpError _(universal)_ | [docs/errors.md](../errors.md) |
 | `/files` | Comprimir imagens, download de URLs/blobs, copiar para a área de transferência, formatar bytes _(browser + Node)_; toCSV _(universal)_ | [docs/files.md](../files.md) |
 | `/function` | debounce, throttle, tryCatch, tryCatchResult, isBrowser/isServer, safeJsonParse | [docs/function.md](../function.md) |
 | `/logger` | Logger estruturado (Pino no Node, baseado em console no browser), redactSecrets, redactDeep | [docs/logger.md](../logger.md) |

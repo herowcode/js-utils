@@ -47,6 +47,26 @@
         "default": "./dist/async/index.cjs"
       }
     },
+    "./auth": {
+      "import": {
+        "types": "./dist/auth/index.d.ts",
+        "default": "./dist/auth/index.js"
+      },
+      "require": {
+        "types": "./dist/auth/index.d.cts",
+        "default": "./dist/auth/index.cjs"
+      }
+    },
+    "./crypto": {
+      "import": {
+        "types": "./dist/crypto/index.d.ts",
+        "default": "./dist/crypto/index.js"
+      },
+      "require": {
+        "types": "./dist/crypto/index.d.cts",
+        "default": "./dist/crypto/index.cjs"
+      }
+    },
     "./date": {
       "import": {
         "types": "./dist/date/index.d.ts",

@@ -1,5 +1,6 @@
 export * from "./backoff-delay"
 export * from "./create-concurrency-limiter"
+export * from "./create-single-flight"
 export * from "./map-in-chunks"
 export * from "./parse-retry-after-ms"
 export * from "./retry"
