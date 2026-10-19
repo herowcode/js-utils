@@ -16,6 +16,23 @@ if (!fs.existsSync(DIST)) {
 const pkg = JSON.parse(fs.readFileSync(PKG_PATH, "utf8"))
 
 const expectedExports = {
+  [`${pkg.name}/async`]: [
+    "backoffDelay",
+    "createConcurrencyLimiter",
+    "mapInChunks",
+    "parseRetryAfterMs",
+    "retry",
+    "sleep",
+    "withTimeout",
+  ],
+  [`${pkg.name}/errors`]: [
+    "TRANSIENT_STATUS_CODES",
+    "getErrorMessage",
+    "getErrorStatus",
+    "getRootCause",
+    "isTransientNetworkError",
+    "isTransientStatus",
+  ],
   [`${pkg.name}/files`]: [
     "compressImage",
     "downloadUrl",
@@ -54,6 +71,12 @@ const DEPENDENCY_FREE_ENTRIES = [
   "index.cjs",
   "array/index.js",
   "array/index.cjs",
+  "async/index.js",
+  "async/index.cjs",
+  "date/date-only.js",
+  "date/date-only.cjs",
+  "errors/index.js",
+  "errors/index.cjs",
   "function/index.js",
   "function/index.cjs",
   "string/index.js",
@@ -82,6 +105,27 @@ const universalEntries = [
   {
     entry: "array/index.cjs",
     smoke: (m) => assert.equal(JSON.stringify(m.unique([1, 1, 2])), "[1,2]"),
+  },
+  {
+    entry: "async/index.cjs",
+    smoke: (m) => assert.equal(m.parseRetryAfterMs("2"), 2000),
+  },
+  {
+    entry: "date/date-only.cjs",
+    smoke: (m) =>
+      assert.equal(
+        m.toISODate(new Date("2026-01-02T01:30:00Z"), {
+          timeZone: "America/Sao_Paulo",
+        }),
+        "2026-01-01",
+      ),
+  },
+  {
+    entry: "errors/index.cjs",
+    smoke: (m) => {
+      assert.equal(m.getErrorMessage({ error: "x" }), "x")
+      assert.equal(m.isTransientStatus(503), true)
+    },
   },
   {
     entry: "function/index.cjs",

@@ -5,7 +5,8 @@ const require = createRequire(import.meta.url)
 const { buildEntries } = require("./scripts/resolve-entries.cjs")
 
 export default defineConfig({
-  entry: buildEntries(),
+  // Internal entry (not in exports): makes the dayjs-free date helpers a shared chunk that /date re-exports
+  entry: { ...buildEntries(), "date/date-only": "src/date/date-only.ts" },
   format: ["cjs", "esm"],
   outDir: "dist",
   outExtension({ format }) {

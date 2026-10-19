@@ -37,6 +37,16 @@
         "default": "./dist/array/index.cjs"
       }
     },
+    "./async": {
+      "import": {
+        "types": "./dist/async/index.d.ts",
+        "default": "./dist/async/index.js"
+      },
+      "require": {
+        "types": "./dist/async/index.d.cts",
+        "default": "./dist/async/index.cjs"
+      }
+    },
     "./date": {
       "import": {
         "types": "./dist/date/index.d.ts",
@@ -45,6 +55,16 @@
       "require": {
         "types": "./dist/date/index.d.cts",
         "default": "./dist/date/index.cjs"
+      }
+    },
+    "./errors": {
+      "import": {
+        "types": "./dist/errors/index.d.ts",
+        "default": "./dist/errors/index.js"
+      },
+      "require": {
+        "types": "./dist/errors/index.d.cts",
+        "default": "./dist/errors/index.cjs"
       }
     },
     "./files": {

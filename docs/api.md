@@ -73,6 +73,8 @@ interface IApiError {
 
 By default `GET` and `HEAD` requests are retried on network errors and on status `408`, `429`, `500`, `502`, `503` and `504`, up to 5 attempts with jittered exponential backoff (between half and all of `2^attempt × 100` ms, capped at `backoffLimit`, 3000 ms by default). Aborted requests are never retried.
 
+The default status list is `TRANSIENT_STATUS_CODES` from [`/errors`](errors.md), and the sleep, timeout, backoff and `Retry-After` parsing are the [`/async`](async.md) helpers.
+
 A `Retry-After` header on a retryable response (seconds or an HTTP date) replaces the backoff for that attempt. The wait is capped at `maxRetryAfter` (10000 ms by default).
 
 Override per request with `retry: { limit, methods, statusCodes, backoffLimit, maxRetryAfter }` (exported as the `IRetryOptions` type; arrays may be `readonly`). Provided fields are merged with the defaults, `methods` are matched case-insensitively, and `limit` is capped at 10 attempts. Network errors are retried only for the configured `methods`.

@@ -5,6 +5,10 @@ const universalModules: string[] = createRequire(import.meta.url)(
   "./scripts/universal-modules.cjs",
 )
 
+const universalFiles: string[] = createRequire(import.meta.url)(
+  "./scripts/universal-files.cjs",
+)
+
 process.env.TZ = "UTC"
 
 export default defineConfig({
@@ -33,7 +37,12 @@ export default defineConfig({
         test: {
           name: "edge",
           environment: "edge-runtime",
-          include: universalModules.map((name) => `src/${name}/**/*.test.ts`),
+          include: [
+            ...universalModules.map((name) => `src/${name}/**/*.test.ts`),
+            ...universalFiles
+              .filter((file) => !file.endsWith("-core"))
+              .map((file) => `src/${file}.test.ts`),
+          ],
           exclude: ["**/console-logger.bundled.test.ts", "node_modules/**"],
         },
       },

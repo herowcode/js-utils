@@ -10,6 +10,13 @@ import {
   fixTimezoneOffset,
   getCurrentDateInUTC,
   getDateInUTC,
+  toISODate,
+  getTodayISODate,
+  addDaysISO,
+  diffDaysISO,
+  parseISODateLocal,
+  getZonedHour,
+  getDatePartsInTimeZone,
 } from '@herowcode/utils/date';
 ```
 
@@ -37,6 +44,84 @@ formatDate(new Date(), 'en-US', { month: 'short', day: 'numeric', year: 'numeric
 | `opts` | `Intl.DateTimeFormatOptions` | Standard Intl formatting options |
 
 A string that is a dayjs token (e.g. `"MM"`, `"DD"`, `"YYYY"`) or is not a valid locale tag (e.g. `"DD/MM/YYYY"`) is used as a dayjs format instead of a locale.
+
+---
+
+## Date-only helpers
+
+Values are `YYYY-MM-DD` strings. These helpers use `Intl` only and never load dayjs, so `import { toISODate } from '@herowcode/utils/date'` stays small.
+
+> **Servers: pass `timeZone` explicitly.** `timeZone` defaults to the runtime's zone, and servers and edge runtimes usually run in UTC, so omitting it gives the UTC day (the bug `toISOString().slice(0, 10)` has). It never silently means UTC, but on a UTC server it behaves like it.
+
+### `toISODate(date, options?)`
+
+The calendar day of an instant in `timeZone`. Accepts `Date`, timestamps and date strings; a bare `YYYY-MM-DD` string is returned unchanged.
+
+```typescript
+toISODate(new Date('2026-01-02T01:30:00Z'), { timeZone: 'America/Sao_Paulo' }); // → "2026-01-01"
+```
+
+Options: `timeZone`, `fallback` (default `""`). Invalid input returns: `fallback`. An unknown `timeZone` throws a `RangeError`.
+
+### `getTodayISODate(options?)`
+
+Today in `timeZone`. Options: `timeZone`, `now` (a `Date` or timestamp, for tests).
+
+```typescript
+getTodayISODate({ timeZone: 'America/Sao_Paulo' }); // → "2026-01-01" at 22:30 local
+```
+
+### `addDaysISO(isoDate, days, options?)`
+
+Calendar math on the Y/M/D parts (via `Date.UTC`), so DST cannot shift the result.
+
+```typescript
+addDaysISO('2028-02-28', 1); // → "2028-02-29"
+addDaysISO('2026-12-31', 1); // → "2027-01-01"
+```
+
+Options: `fallback` (default `""`). Invalid input returns: `fallback` (malformed or nonexistent date, non-integer `days`).
+
+### `diffDaysISO(a, b, options?)`
+
+Whole calendar days `a - b`.
+
+```typescript
+diffDaysISO('2026-03-10', '2026-03-01'); // → 9
+```
+
+Options: `fallback` (default `NaN`). Invalid input returns: `fallback`.
+
+### `parseISODateLocal(isoDate, options?)`
+
+`YYYY-MM-DD` to a `Date` at local midnight. `new Date("2026-01-01")` is UTC midnight, which is the previous day west of UTC.
+
+Options: `fallback` (default `null`). Invalid input returns: `fallback`.
+
+### `getZonedHour(date, options?)`
+
+The hour, 0-23, of an instant in `timeZone` (midnight is `0`, never `24`).
+
+```typescript
+getZonedHour(new Date('2026-01-02T01:30:00Z'), { timeZone: 'America/Sao_Paulo' }); // → 22
+```
+
+Options: `timeZone`, `fallback` (default `NaN`). Invalid input returns: `fallback`.
+
+### `getDatePartsInTimeZone(date, options?)`
+
+`{ year, month, day, hour, minute, second }` of an instant in `timeZone`.
+
+Options: `timeZone`, `fallback` (default `null`). Invalid input returns: `fallback`.
+
+### Replacing a local copy
+
+| Local pattern | Use |
+|---------------|-----|
+| `date.toISOString().slice(0, 10)` | `toISODate(date, { timeZone })` (the slice gives the UTC day: tomorrow after 21:00 in Brazil) |
+| `new Date("2026-01-01")` for a date-only value | `parseISODateLocal("2026-01-01")` |
+| `d.setDate(d.getDate() + n)` on a day string | `addDaysISO(day, n)` |
+| `Math.round((a - b) / 86400000)` | `diffDaysISO(a, b)` |
 
 ---
 

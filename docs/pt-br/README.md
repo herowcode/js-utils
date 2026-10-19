@@ -59,7 +59,9 @@ Projetado, construído e mantido por [Judson Cairo](https://judsoncairo.com) com
 |--------|-----------|------|
 | `/api` | Cliente HTTP com retry, tokens de auth e erros padronizados | [docs/api.md](../api.md) |
 | `/array` | shuffle, unique | [docs/array.md](../array.md) |
-| `/date` | Formatação, tempo relativo, timezone, tempo gasto | [docs/date.md](../date.md) |
+| `/async` | sleep, withTimeout, retry (somente transitórios), backoff, limitador de concorrência _(universal)_ | [docs/async.md](../async.md) |
+| `/date` | Formatação, tempo relativo, timezone, tempo gasto, helpers de data (YYYY-MM-DD) com timezone (`toISODate`, `addDaysISO`) | [docs/date.md](../date.md) |
+| `/errors` | getErrorMessage, getErrorStatus, getRootCause, detecção de erros transitórios _(universal)_ | [docs/errors.md](../errors.md) |
 | `/files` | Comprimir imagens, download de URLs, formatar bytes _(browser + Node)_ | [docs/files.md](../files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](../function.md) |
 | `/logger` | Logger estruturado (Pino no Node, baseado em console no browser) | [docs/logger.md](../logger.md) |
@@ -107,7 +109,7 @@ O entry point raiz só reexporta os módulos sem dependências (`array`, `functi
 import { capitalize, debounce, shuffle } from '@herowcode/utils';
 ```
 
-`api`, `date`, `files`, `logger` e `youtube` só existem via subpath. Atualizando da 1.x? Veja as notas de migração da 2.0 no [CHANGELOG.md](../../CHANGELOG.md).
+`api`, `async`, `date`, `errors`, `files`, `logger` e `youtube` só existem via subpath. Atualizando da 1.x? Veja as notas de migração da 2.0 no [CHANGELOG.md](../../CHANGELOG.md).
 
 ---
 

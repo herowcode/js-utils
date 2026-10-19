@@ -59,7 +59,9 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 |--------|-------------|------|
 | `/api` | HTTP client with retry, auth tokens, and standardized errors | [docs/api.md](docs/api.md) |
 | `/array` | shuffle, unique | [docs/array.md](docs/array.md) |
-| `/date` | Format, relative time, timezone correction, time-spent parsing | [docs/date.md](docs/date.md) |
+| `/async` | sleep, withTimeout, retry (transient-only), backoff, concurrency limiter _(universal)_ | [docs/async.md](docs/async.md) |
+| `/date` | Format, relative time, timezone correction, time-spent parsing, timezone-safe date-only helpers (`toISODate`, `addDaysISO`) | [docs/date.md](docs/date.md) |
+| `/errors` | getErrorMessage, getErrorStatus, getRootCause, transient-error detection _(universal)_ | [docs/errors.md](docs/errors.md) |
 | `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
 | `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
@@ -109,7 +111,7 @@ The root entry only re-exports the dependency-free modules (`array`, `function`,
 import { capitalize, debounce, shuffle } from '@herowcode/utils';
 ```
 
-`api`, `date`, `files`, `logger` and `youtube` are subpath-only. Upgrading from 1.x? See [CHANGELOG.md](CHANGELOG.md) for the 2.0 migration notes.
+`api`, `async`, `date`, `errors`, `files`, `logger` and `youtube` are subpath-only. Upgrading from 1.x? See [CHANGELOG.md](CHANGELOG.md) for the 2.0 migration notes.
 
 ---
 
