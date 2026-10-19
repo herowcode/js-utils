@@ -1,6 +1,46 @@
 const TAG_START = /[A-Za-z/!?>]/
 
-export function removeHtmlTags(input: string): string {
+export interface IRemoveHtmlTagsOptions {
+  /** Decodes `&amp; &lt; &gt; &quot; &#39; &nbsp;` and numeric entities. The result is plain text: escape it before putting it back into HTML. */
+  decodeEntities?: boolean
+  /** Collapses runs of whitespace (including newlines) into one space and trims. */
+  collapseWhitespace?: boolean
+}
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  nbsp: " ",
+}
+
+// Digit caps keep every code point <= 0x10ffff, so fromCodePoint cannot throw
+function decodeEntities(text: string): string {
+  return text.replace(
+    /&(?:#(\d{1,6})|#x([\da-f]{1,5})|([a-z]{2,4}));/gi,
+    (m, dec, hex, name) =>
+      name
+        ? (NAMED_ENTITIES[name.toLowerCase()] ?? m)
+        : String.fromCodePoint(dec ? +dec : Number.parseInt(hex, 16)),
+  )
+}
+
+/**
+ * Strips HTML tags from a string, keeping the text between them.
+ * @example removeHtmlTags("<p>a &amp; b</p>", { decodeEntities: true }) // "a & b"
+ */
+export function removeHtmlTags(
+  input: string,
+  options?: IRemoveHtmlTagsOptions,
+): string {
+  const stripped = stripTags(input)
+  let out = options?.decodeEntities ? decodeEntities(stripped) : stripped
+  if (options?.collapseWhitespace) out = out.replace(/\s+/g, " ").trim()
+  return out
+}
+
+function stripTags(input: string): string {
   if (!input || typeof input !== "string") {
     return ""
   }

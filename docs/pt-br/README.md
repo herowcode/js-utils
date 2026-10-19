@@ -64,7 +64,7 @@ Projetado, construído e mantido por [Judson Cairo](https://judsoncairo.com) com
 | `/env` | requireEnv, optionalEnv, parseBoolean com fonte injetável e erros com código _(universal)_ | [docs/env.md](../env.md) |
 | `/errors` | getErrorMessage, getErrorStatus, getRootCause, detecção de erros transitórios _(universal)_ | [docs/errors.md](../errors.md) |
 | `/files` | Comprimir imagens, download de URLs/blobs, copiar para a área de transferência, formatar bytes _(browser + Node)_; toCSV _(universal)_ | [docs/files.md](../files.md) |
-| `/function` | debounce, throttle, tryCatch, isBrowser/isServer, safeJsonParse | [docs/function.md](../function.md) |
+| `/function` | debounce, throttle, tryCatch, tryCatchResult, isBrowser/isServer, safeJsonParse | [docs/function.md](../function.md) |
 | `/logger` | Logger estruturado (Pino no Node, baseado em console no browser), redactSecrets, redactDeep | [docs/logger.md](../logger.md) |
 | `/number` | formatCurrency, formatNumber, formatPercent, percentOf, parseLocaleNumber, toNumber _(universal)_ | [docs/number.md](../number.md) |
 | `/string` | Conversão de case, slugify, removeAccents, normalizeText, truncate, markdownToText, getInitials, escapeHtml, escapeRegExp, pluralize, formatação de tempo | [docs/string.md](../string.md) |

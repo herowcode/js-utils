@@ -154,6 +154,15 @@ const { data, error } = await apiWrapper(
 );
 ```
 
+When the thrown `Response` carries a valid `Retry-After` header (seconds or HTTP date), `error.retryAfterSeconds` holds the wait in whole seconds (rounded up); the field is absent otherwise and the rest of the error shape is unchanged.
+
+```typescript
+const { error } = await apiWrapper(() => callApi());
+if (error?.status === 429 && error.retryAfterSeconds !== undefined) {
+  await sleep(error.retryAfterSeconds * 1000);
+}
+```
+
 ```typescript
 // With a typed result
 const { data, error } = await apiWrapper<User[]>(async () => {

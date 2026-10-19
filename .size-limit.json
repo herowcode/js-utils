@@ -2,7 +2,7 @@
   {
     "name": "root (ESM)",
     "path": "dist/index.js",
-    "limit": "2.7 kB"
+    "limit": "3 kB"
   },
   {
     "name": "/array",
@@ -12,18 +12,18 @@
   {
     "name": "/function",
     "path": "dist/function/index.js",
-    "limit": "410 B"
+    "limit": "530 B"
   },
   {
     "name": "/string",
     "path": "dist/string/index.js",
-    "limit": "2.1 kB"
+    "limit": "2.55 kB"
   },
   {
     "name": "slugify from root",
     "path": "dist/index.js",
     "import": "{ slugify }",
-    "limit": "200 B"
+    "limit": "240 B"
   },
   {
     "name": "/errors",
@@ -56,7 +56,7 @@
   {
     "name": "/api",
     "path": "dist/api/index.js",
-    "limit": "2.5 kB"
+    "limit": "2.7 kB"
   },
   {
     "name": "/date",

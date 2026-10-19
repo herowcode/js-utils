@@ -43,6 +43,14 @@ formatDate(new Date(), 'en-US', { month: 'short', day: 'numeric', year: 'numeric
 | `locale` | `string \| Intl.Locale` | BCP 47 locale tag (e.g. `"en-US"`, `"pt-BR"`) or an `Intl.Locale` |
 | `opts` | `Intl.DateTimeFormatOptions` | Standard Intl formatting options |
 
+Pass a config object as the second argument to use `fallback`: `formatDate(value, { fallback: '-' })` returns `'-'` for an invalid date instead of throwing. Without `fallback` an invalid date still throws `RangeError("Invalid time value")`. The config object also accepts `locale`, `format` (dayjs tokens), `intl` and `useIntl`.
+
+```typescript
+formatDate('not a date', { format: 'DD/MM/YYYY', fallback: '-' }); // → "-"
+```
+
+Invalid input returns: `fallback` when set on the config object, otherwise throws `RangeError`.
+
 A string that is a dayjs token (e.g. `"MM"`, `"DD"`, `"YYYY"`) or is not a valid locale tag (e.g. `"DD/MM/YYYY"`) is used as a dayjs format instead of a locale.
 
 ---
@@ -133,7 +141,7 @@ Runs `callback` with a temporary global Intl configuration (also see `setDayjsGl
 
 ---
 
-## `getRelativeTime(date, dateNow?)`
+## `getRelativeTime(date, dateNow?, options?)`
 
 Returns a human-readable relative time string. Accepts any input supported by dayjs.
 
@@ -148,6 +156,30 @@ getRelativeTime('2025-01-01');
 getRelativeTime('2025-09-15T11:59:00Z', dayjs('2025-09-15T12:00:00Z'));
 // → "a minute ago"
 ```
+
+Without `style` or `calendar` the output is the dayjs string above, unchanged. Setting either switches to `Intl.RelativeTimeFormat` (default locale `pt-BR`) and picks the largest whole unit: seconds under 60, minutes under 60, hours under 24, days under 7, weeks under 5, then months (under 12) and years.
+
+```typescript
+const now = dayjs('2025-09-15T12:00:00Z');
+
+getRelativeTime(now.subtract(5, 'minute'), now, { style: 'short' });
+// → "há 5 min."
+getRelativeTime(now.subtract(1, 'day'), now, { calendar: true });
+// → "ontem"
+getRelativeTime(now.subtract(1, 'day'), now, { calendar: true, locale: 'en' });
+// → "yesterday"
+getRelativeTime('garbage', now, { fallback: '-' });
+// → "-"
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `style` | none | `"long"`, `"short"` or `"narrow"`; enables the Intl path (`"long"` when only `calendar` is set) |
+| `calendar` | `false` | Words such as "ontem"/"yesterday" instead of "1 dia atrás" (`numeric: "auto"`); enables the Intl path |
+| `locale` | `"pt-BR"` | BCP 47 locale for the Intl path |
+| `fallback` | none | Returned when `date` or `dateNow` is invalid, on either path |
+
+Invalid input returns: `fallback` when set; otherwise the dayjs result for an invalid date, as before.
 
 ---
 

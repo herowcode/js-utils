@@ -10,6 +10,7 @@ import {
   safeJsonParse,
   throttle,
   tryCatch,
+  tryCatchResult,
 } from '@herowcode/utils/function';
 ```
 
@@ -42,9 +43,18 @@ window.addEventListener('resize', onResize);
 | `fn` | `(...args: A) => unknown` | The function to debounce; its parameter types carry over to the returned function |
 | `delay` | `number` | Milliseconds to wait after the last call |
 
+The returned function also has `cancel()` (drops the pending call) and `flush()` (runs the pending call now with the last arguments; no-op when nothing is pending).
+
+```typescript
+const save = debounce(persist, 500);
+save(draft);
+window.addEventListener('beforeunload', () => save.flush());
+// later, on unmount: save.cancel();
+```
+
 ---
 
-## `throttle(fn, delay)`
+## `throttle(fn, delay, options?)`
 
 Returns a throttled version of `fn` that executes at most once every `delay` ms, regardless of how often it is called.
 
@@ -67,6 +77,14 @@ const saveChanges = throttle(async (data) => {
 |-----------|------|-------------|
 | `fn` | `(...args: A) => unknown` | The function to throttle; its parameter types carry over to the returned function |
 | `delay` | `number` | Minimum milliseconds between invocations |
+| `options.leading` | `boolean` | Default `true`: invoke on the first call of a window |
+| `options.trailing` | `boolean` | Default `true`: invoke once more at the window end with the last arguments |
+
+Both default to `true`, which is the previous behavior. Disabling both throws, since the function could never run.
+
+```typescript
+const onScroll = throttle(update, 100, { trailing: false }); // drops calls inside the window
+```
 
 ---
 
@@ -148,6 +166,40 @@ const { data, error } = await tryCatch<User[], Error>(
 | `defaultData` | `D` | Value returned as `data` when `fn` throws |
 
 **Return:** `Promise<{ data: T | D; error: E | null }>`
+
+Invalid input returns: not applicable; a throw or rejection becomes `{ data: defaultData ?? null, error }`.
+
+---
+
+## `tryCatchResult(fn)`
+
+Same input as `tryCatch` (a promise, or a function returning a value or promise), but returns a discriminated `{ ok }` result, so `if (!r.ok)` narrows without null checks. It has no default-data parameter.
+
+```typescript
+const r = await tryCatchResult(() => fetchUser(id));
+if (!r.ok) {
+  report(r.error); // E (defaults to Error)
+  return;
+}
+r.data; // User
+```
+
+**Return:** `Promise<{ ok: true; data: T } | { ok: false; error: E }>`
+
+### Which result shape to use
+
+| Helper | Shape | Use when |
+|--------|-------|----------|
+| `tryCatch(fn, defaultData?)` | `{ data, error }` | You want a fallback `data` on failure, or already destructure `{ data, error }` |
+| `tryCatchResult(fn)` | `{ ok: true, data } \| { ok: false, error }` | You want narrowing on `ok`, and `data` may legitimately be `null` |
+| `apiWrapper(fn)` (`/api`) | `{ data, error: IApiError }` | The call is an HTTP request and you want a normalized error (`status`, `retryAfterSeconds`) |
+| `safeJsonParse(text, { fallback })` | the value or the fallback | The operation is synchronous `JSON.parse` |
+
+Invalid input returns: not applicable; failures become `{ ok: false, error }`.
+
+### Replacing a local copy
+
+Replaces local `Result<T>` helpers shaped `{ ok, data } | { ok, error }` or `[error, data]` tuples. Map `[err, data]` call sites to `r.ok ? r.data : r.error`.
 
 ---
 

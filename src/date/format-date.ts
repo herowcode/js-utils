@@ -18,6 +18,8 @@ export interface IFormatDateConfig {
    * Forces the use of Intl formatting even if a format string is supplied.
    */
   useIntl?: boolean
+  /** Returned instead of throwing a RangeError when the date is invalid. */
+  fallback?: string
 }
 
 type TLocaleOrConfig = Intl.LocalesArgument | IFormatDateConfig
@@ -124,6 +126,12 @@ export function formatDate(
   const instance = dayjs(date)
 
   if (!instance.isValid()) {
+    if (
+      isFormatDateConfig(localeOrConfig) &&
+      localeOrConfig.fallback !== undefined
+    ) {
+      return localeOrConfig.fallback
+    }
     throw new RangeError("Invalid time value")
   }
 

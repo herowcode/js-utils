@@ -87,16 +87,23 @@ Returns `false` (and logs the error) on a non-2xx response, a network error, or 
 
 ---
 
-### `formatBytes(bytes)`
+### `formatBytes(bytes, options?)`
 
-Converts a byte count to a human-readable string.
+Converts a byte count to a human-readable string. Throws on a negative size.
 
 ```typescript
-formatBytes(0);          // → "0 Bytes"
-formatBytes(1024);       // → "1 KB"
+formatBytes(0);          // → "0.00 B"
+formatBytes(1024);       // → "1.00 KB"
 formatBytes(1234567);    // → "1.18 MB"
-formatBytes(1073741824); // → "1 GB"
+formatBytes(1500, { base: 1000, decimals: 1 });  // → "1.5 KB"
+formatBytes(1536, { locale: 'pt-BR' });          // → "1,50 KB"
 ```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `decimals` | `2` | Digits after the decimal point |
+| `base` | `1024` | `1024` or `1000` per unit step; unit labels stay `KB`, `MB`, ... |
+| `locale` | none | BCP 47 locale for the number (decimal separator, grouping); without it the number uses `.` |
 
 ---
 
