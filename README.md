@@ -63,7 +63,7 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 | `/files` | Compress images, download URLs, format bytes _(browser + Node)_ | [docs/files.md](docs/files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](docs/function.md) |
 | `/logger` | Structured logger (Pino on Node, console-based on browser) | [docs/logger.md](docs/logger.md) |
-| `/string` | Case conversion, slugify, truncate, markdownToText, time formatting | [docs/string.md](docs/string.md) |
+| `/string` | Case conversion, slugify, removeAccents, normalizeText, truncate, markdownToText, time formatting | [docs/string.md](docs/string.md) |
 | `/youtube` | Extract IDs, generate URLs, video info with caching | [docs/youtube.md](docs/youtube.md) |
 
 ---

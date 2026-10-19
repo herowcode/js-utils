@@ -3,7 +3,7 @@
 HTTP client with retry logic, async auth token injection, and standardized error handling.
 
 ```typescript
-import { apiClient, apiWrapper } from '@herowcode/utils/api';
+import { apiClient, apiWrapper, buildQueryString } from '@herowcode/utils/api';
 ```
 
 ---
@@ -86,6 +86,24 @@ Fetch drops `Authorization` when a redirect crosses origins, but not custom head
 ### Invalid JSON responses
 
 If a successful response body is not valid JSON, the call fails with an `Error` whose message includes the status, URL and a truncated snippet of the body.
+
+---
+
+## `buildQueryString(params)`
+
+Builds the query string the client appends for `params`. Returns `""` when nothing is left, otherwise a string starting with `?`. `null` and `undefined` values are skipped; an array repeats the key (`a=1&a=2`) and skips its own `null`/`undefined` entries; an empty array adds nothing. Use it when you build a URL yourself and want the same encoding as `apiClient`.
+
+```typescript
+buildQueryString({ page: 1, q: 'a b' });        // → "?page=1&q=a+b"
+buildQueryString({ tag: ['x', 'y'], skip: null }); // → "?tag=x&tag=y"
+buildQueryString({});                           // → ""
+```
+
+Invalid input returns: `""` for an empty or all-nullish `params`. `apiClient` accepts the same array values in `params`.
+
+### Replacing a local copy
+
+A hand-written `new URLSearchParams(...)` helper maps to `buildQueryString`. Differences: output keeps the leading `?` (and is `""`, not `"?"`, when empty), and arrays become repeated keys instead of `a=1,2`.
 
 ---
 

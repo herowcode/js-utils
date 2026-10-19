@@ -1,3 +1,5 @@
+export type { TQueryParams } from "./build-query-string"
+export { buildQueryString } from "./build-query-string"
 export type {
   ICustomRequestInit,
   IRetryOptions,

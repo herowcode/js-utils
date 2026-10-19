@@ -9,6 +9,8 @@ import {
   kebabCase,
   snakeCase,
   slugify,
+  removeAccents,
+  normalizeText,
   truncate,
   toSentenceCase,
   removeHtmlTags,
@@ -93,6 +95,28 @@ slugify('Hello World!');         // → "hello-world"
 slugify('Olá Mundo');            // → "ola-mundo"
 slugify('  Multiple   Spaces '); // → "multiple-spaces"
 ```
+
+### `removeAccents(text)`
+
+Strips diacritics via NFD decomposition. Case and punctuation are kept.
+
+```typescript
+removeAccents('Crème Brûlée'); // → "Creme Brulee"
+```
+
+### `normalizeText(text)`
+
+Lowercases, strips accents and punctuation, and collapses whitespace to single spaces. Use it to compare or search text; `slugify` is `normalizeText` with spaces turned into hyphens.
+
+```typescript
+normalizeText('  Olá,   Mundo! '); // → "ola mundo"
+```
+
+Invalid input returns: not applicable, blank input returns `""`.
+
+### Replacing a local copy
+
+A local `str.normalize("NFD").replace(/[\u0300-\u036f]/g, "")` is `removeAccents`. Characters outside `[A-Za-z0-9_]` and whitespace (for example CJK) are dropped by `normalizeText`, as `slugify` already does.
 
 ### `truncate(str, length, suffix?)`
 

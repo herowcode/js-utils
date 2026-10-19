@@ -63,7 +63,7 @@ Projetado, construído e mantido por [Judson Cairo](https://judsoncairo.com) com
 | `/files` | Comprimir imagens, download de URLs, formatar bytes _(browser + Node)_ | [docs/files.md](../files.md) |
 | `/function` | debounce, throttle, tryCatch | [docs/function.md](../function.md) |
 | `/logger` | Logger estruturado (Pino no Node, baseado em console no browser) | [docs/logger.md](../logger.md) |
-| `/string` | Conversão de case, slugify, truncate, markdownToText, formatação de tempo | [docs/string.md](../string.md) |
+| `/string` | Conversão de case, slugify, removeAccents, normalizeText, truncate, markdownToText, formatação de tempo | [docs/string.md](../string.md) |
 | `/youtube` | Extrair IDs, gerar URLs, informações de vídeo com cache | [docs/youtube.md](../youtube.md) |
 
 ---

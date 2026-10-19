@@ -1,3 +1,4 @@
+import { buildQueryString, type TQueryParams } from "./build-query-string"
 import { apiWrapper } from "./wrapper"
 
 export interface IRetryOptions {
@@ -11,7 +12,7 @@ export interface IRetryOptions {
 
 export interface ICustomRequestInit extends Omit<RequestInit, "body"> {
   json?: unknown
-  params?: Record<string, string | number | boolean | null | undefined>
+  params?: TQueryParams
   /** Total time in ms for the request, retries and backoff included. */
   timeout?: number
   retry?: IRetryOptions
@@ -29,21 +30,6 @@ const MAX_RETRY_LIMIT = 10
 // setTimeout fires immediately for delays above 2^31-1 ms
 const MAX_TIMER_DELAY = 2 ** 31 - 1
 const MAX_BODY_SNIPPET = 200
-
-function buildQueryString(
-  params: Record<string, string | number | boolean | null | undefined>,
-): string {
-  const searchParams = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== null && value !== undefined) {
-      searchParams.append(key, String(value))
-    }
-  })
-
-  const queryString = searchParams.toString()
-  return queryString ? `?${queryString}` : ""
-}
 
 // Callbacks can't be cancelled, so stop waiting for them once the request aborts
 function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
