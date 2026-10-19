@@ -79,6 +79,8 @@ Today in `timeZone`. Options: `timeZone`, `now` (a `Date` or timestamp, for test
 getTodayISODate({ timeZone: 'America/Sao_Paulo' }); // → "2026-01-01" at 22:30 local
 ```
 
+Invalid input returns: not applicable; an unknown `timeZone` throws a `RangeError`.
+
 ### `addDaysISO(isoDate, days, options?)`
 
 Calendar math on the Y/M/D parts (via `Date.UTC`), so DST cannot shift the result.

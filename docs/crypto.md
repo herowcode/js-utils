@@ -61,6 +61,10 @@ await hmacSha256Hex('Jefe', 'what do ya want for nothing?');
 
 Invalid input returns: not applicable, a missing WebCrypto rejects with `HEROW_CRYPTO_UNAVAILABLE`.
 
+### Replacing a local copy
+
+Replaces `createHmac('sha256', key).update(data).digest('hex')` from `node:crypto`, which does not exist on edge runtimes. This is async (WebCrypto), so add `await`.
+
 ---
 
 ## `sha256Hex(data)`
@@ -73,6 +77,10 @@ await sha256Hex('abc');
 ```
 
 Invalid input returns: not applicable, a missing WebCrypto rejects with `HEROW_CRYPTO_UNAVAILABLE`.
+
+### Replacing a local copy
+
+Replaces `createHash('sha256')` and `Buffer` hex conversions that break on edge runtimes. It is async, so add `await`; input is hashed as UTF-8.
 
 ---
 
@@ -107,6 +115,12 @@ await db.sessions.insert({ tokenHash: hash });
 `bytes` is the amount of randomness from `crypto.getRandomValues`; use 16 or more for session tokens.
 
 Throws (rejects): [`HEROW_CRYPTO_INVALID_BYTES`](errors.md#herow_crypto_invalid_bytes) when `bytes` is not an integer from 1 to 65536.
+
+Invalid input returns: not applicable, `bytes` outside 1 to 65536 rejects with `HEROW_CRYPTO_INVALID_BYTES`.
+
+### Replacing a local copy
+
+Replaces `Math.random().toString(36)` and `uuid`-as-secret. The token comes from `crypto.getRandomValues`, is base64url (URL-safe, no padding), and you get the hash to store, so the plain token never has to be saved.
 
 ---
 

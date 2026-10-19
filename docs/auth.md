@@ -41,6 +41,10 @@ getJWTExp(token); // → 1767225600
 
 Invalid input returns: `null` (malformed token, missing `exp`, or an `exp` that is not a number).
 
+### Replacing a local copy
+
+Local helpers return `exp * 1000` (milliseconds) or `undefined`, and compare against `Date.now()`. This returns seconds, the JWT unit, and `null` when absent.
+
 ---
 
 ## `isJWTExpired(token)`
@@ -52,6 +56,10 @@ if (isJWTExpired(token)) redirectToLogin();
 ```
 
 Invalid input returns: `true`.
+
+### Replacing a local copy
+
+A local `payload.exp * 1000 < Date.now()` evaluates to `false` (not expired) when `exp` is missing or the token is malformed. This fails closed and returns `true`.
 
 ---
 
@@ -85,6 +93,10 @@ extractBearerToken(request.headers.get('authorization')); // "Bearer abc" → "a
 ```
 
 Invalid input returns: `null` (other schemes, no token, extra parts, `null`/`undefined`).
+
+### Replacing a local copy
+
+Replaces `header.replace('Bearer ', '')` and `header.split(' ')[1]`, which accept `Basic abc` and extra parts. Only a single `Bearer <token>` pair passes (the scheme is case-insensitive).
 
 ---
 

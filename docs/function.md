@@ -102,7 +102,7 @@ Invalid input returns: not applicable (no arguments).
 
 ### Replacing a local copy
 
-Replaces `typeof window !== 'undefined'` checks. They do not detect a React Native or web-worker context as a browser.
+Replaces `typeof window !== 'undefined'` checks, which are also true in React Native (it defines `window` but has no `document`).
 
 ---
 

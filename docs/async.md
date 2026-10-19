@@ -28,6 +28,12 @@ await sleep(500);
 await sleep(500, controller.signal);
 ```
 
+Invalid input returns: not applicable; `ms` goes straight to `setTimeout`, so a negative or `NaN` value resolves on the next tick.
+
+### Replacing a local copy
+
+Replaces `new Promise((r) => setTimeout(r, ms))`. The difference is the optional `signal`: aborting rejects with `signal.reason` and clears the timer, so a cancelled flow does not keep the process alive.
+
 ---
 
 ## `withTimeout(signal, timeoutMs)`
@@ -42,6 +48,10 @@ const res = await fetch(url, { signal });
 ```
 
 Invalid input returns: the input `signal` unchanged.
+
+### Replacing a local copy
+
+Replaces `Promise.race([promise, timeoutPromise])` helpers, which leave the timer running and never cancel the work. This returns an `AbortSignal` you hand to `fetch`, so the request is actually aborted; the reason is a `TimeoutError`.
 
 ---
 
@@ -58,6 +68,12 @@ Exponential backoff with equal jitter, in ms: `min(2^attempt * baseMs, maxMs)`, 
 await sleep(backoffDelay(2)); // 200-400 ms
 ```
 
+Invalid input returns: not applicable; a `NaN` attempt gives `NaN`, so pass an integer from 0.
+
+### Replacing a local copy
+
+Local `Math.pow(2, n) * 1000` loops have no cap and no jitter, so clients retry in lockstep. Defaults here are `baseMs: 100`, `maxMs: 3000`; raise both for slow upstreams.
+
 ---
 
 ## `parseRetryAfterMs(value, now?)`
@@ -70,6 +86,10 @@ parseRetryAfterMs('Wed, 21 Oct 2026 07:28:00 GMT');  // → ms until that date
 ```
 
 Invalid input returns: `undefined` (also for `null`, `undefined`, `"1.5"`, `"-1"`).
+
+### Replacing a local copy
+
+Replaces `Number(header) * 1000`, which gives `NaN` for the HTTP-date form and a negative wait for past dates. Dates are converted to the remaining milliseconds (at least `0`) and bad values give `undefined`, so check it before sleeping.
 
 ---
 
@@ -115,6 +135,10 @@ const users = await mapInChunks(ids, 5, (id) => loadUser(id));
 
 Invalid input returns: `[]` for empty `items`; a `chunkSize` below 1 or `NaN` runs one at a time.
 
+### Replacing a local copy
+
+Replaces hand-rolled `for` loops that `await Promise.all(slice)`. It is also chunk after chunk, not a sliding window: one slow item holds its whole chunk. Use `createConcurrencyLimiter` when every slot should refill immediately.
+
 ---
 
 ## `createConcurrencyLimiter(limit)`
@@ -127,6 +151,10 @@ const pages = await Promise.all(urls.map((url) => limit(() => fetch(url))));
 ```
 
 Invalid input returns: a `limit` below 1 or `NaN` is treated as 1.
+
+### Replacing a local copy
+
+Replaces `p-limit` style wrappers and ad-hoc counters. Slots free on rejection too, and tasks start in FIFO order; combine with `mapInChunks` only when you need ordered results.
 
 ---
 

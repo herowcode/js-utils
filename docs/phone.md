@@ -25,6 +25,10 @@ onlyDigits(null);               // → ""
 
 Invalid input returns: `""` for anything that is not a string or a finite number.
 
+### Replacing a local copy
+
+Replaces `value.replace(/\D/g, '')`, which throws on `null`, `undefined` and numbers. Here they become `""` (numbers are stringified first).
+
 ---
 
 ## `normalizePhone(input, options?)`
@@ -73,6 +77,10 @@ formatPhone('4155552671', { country: 'US' });           // → "(415) 555-2671"
 
 Invalid input returns: `fallback` (`""` by default).
 
+### Replacing a local copy
+
+Local masks assume 11 digits and leave landlines or numbers with the country code half-formatted. This normalizes first (so `+55 11 ...` works), picks the 8 or 9 digit layout, and returns `fallback` otherwise.
+
 ---
 
 ## `getBRMobileVariants(input)`
@@ -86,6 +94,10 @@ getBRMobileVariants('1133334444');      // → ["+551133334444"] (landline, one 
 ```
 
 Invalid input returns: `[]`.
+
+### Replacing a local copy
+
+Replaces hand-written `slice` logic that inserts or drops the 9th digit when matching contacts stored either way. The 9-digit form comes first; landlines return a single entry.
 
 ---
 

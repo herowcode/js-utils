@@ -262,10 +262,11 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:exports": "node scripts/verify-universal-source.cjs && node scripts/verify-exports.cjs",
+    "test:exports": "node scripts/verify-universal-source.cjs && node scripts/verify-exports.cjs && node scripts/verify-docs.cjs",
     "test:package": "publint --strict && attw --pack . --profile node16",
     "test:coverage": "vitest run --coverage",
     "size": "size-limit",
+    "docs:index": "node scripts/generate-index.cjs --write",
     "changeset": "changeset",
     "prepublishOnly": "pnpm build && pnpm test:exports"
   },

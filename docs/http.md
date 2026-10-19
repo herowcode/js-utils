@@ -81,6 +81,10 @@ Takes the same options as `corsHeaders`. When `headers` is not set, the answer e
 
 Invalid input returns: `null` for non-`OPTIONS` requests.
 
+### Replacing a local copy
+
+Replaces hand-built `OPTIONS` branches that answer `200` with `Access-Control-Allow-Origin: *`. This answers `204`, only for listed origins, and returns `null` for any other method so the handler continues.
+
 ---
 
 ## `jsonResponse(data, init?)`
@@ -95,6 +99,10 @@ return jsonResponse({ id: 1 }, { status: 201, headers: corsHeaders(request, { or
 
 Invalid input returns: not applicable. Values `JSON.stringify` cannot serialize (circular objects, `BigInt`) throw its `TypeError`.
 
+### Replacing a local copy
+
+Replaces `new Response(JSON.stringify(x), { headers: { 'content-type': ... } })` and `Response.json`. Differences: a `Content-Type` you pass is kept, and `204`, `205` and `304` are sent without a body (they throw otherwise).
+
 ---
 
 ## `fetchWithTimeout(input, init?, { timeoutMs }?)`
@@ -106,6 +114,10 @@ const res = await fetchWithTimeout('https://api.example.com/slow', { method: 'PO
 ```
 
 Invalid input returns: not applicable; it rejects like `fetch`, with the signal's reason when aborted.
+
+### Replacing a local copy
+
+Replaces `Promise.race` timeouts and `setTimeout(() => controller.abort())`, which leak timers. It aborts the real request with a `TimeoutError` and still honours your own `signal`.
 
 ---
 

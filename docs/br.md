@@ -41,6 +41,10 @@ It does not validate: `formatCPF('11111111111')` returns `"111.111.111-11"`. Com
 
 Invalid input returns: `fallback` (`""` by default) when the value does not have exactly 11 digits.
 
+### Replacing a local copy
+
+Local masks (`replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, ...)`) return half-formatted strings for short input. This returns `fallback` unless there are exactly 11 digits, and never validates, so pair it with `isValidCPF`.
+
 ---
 
 ## `isValidCPF(value)`
@@ -74,6 +78,10 @@ It does not validate the check digits.
 
 Invalid input returns: `fallback` (`""` by default) when the value does not have exactly 14 letters or digits.
 
+### Replacing a local copy
+
+Local masks only handle 14 digits. This also formats the alphanumeric CNPJ (letters uppercased) and returns `fallback` for any other length.
+
 ---
 
 ## `isValidCNPJ(value)`
@@ -87,5 +95,9 @@ isValidCNPJ('00.000.000/0000-00'); // → false
 ```
 
 Invalid input returns: `false` for anything that is not a valid CNPJ, including non-strings.
+
+### Replacing a local copy
+
+Digit-only validators reject alphanumeric CNPJs issued from July 2026, and often accept `00.000.000/0000-00`. This handles both.
 
 [← Back to README](../README.md)

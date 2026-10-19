@@ -54,6 +54,10 @@ getRootCause(new Error('a', { cause: new Error('b') })); // → Error: b
 
 Invalid input returns: the input itself (`getRootCause(undefined)` is `undefined`).
 
+### Replacing a local copy
+
+Replaces `while (e.cause) e = e.cause` loops, which never end on a cyclic chain. This stops at 10 links and at cycles.
+
 ---
 
 ## `getErrorStatus(err)`
@@ -66,6 +70,10 @@ getErrorStatus(new Error('x'));                // → undefined
 ```
 
 Invalid input returns: `undefined`.
+
+### Replacing a local copy
+
+Local `err.status ?? err.response?.status` helpers miss `statusCode` and statuses on the cause chain. Returns `undefined` rather than `0` when none is found.
 
 ---
 
@@ -104,6 +112,10 @@ isTransientStatus(400); // → false
 ```
 
 Invalid input returns: `false`.
+
+### Replacing a local copy
+
+Local `status >= 500` checks retry 501/505 and skip 408/429. The set is `408, 429, 500, 502, 503, 504`, shared with `retry` and `apiClient`.
 
 ---
 

@@ -115,6 +115,8 @@ Strips diacritics via NFD decomposition. Case and punctuation are kept.
 removeAccents('Crème Brûlée'); // → "Creme Brulee"
 ```
 
+Invalid input returns: not applicable, a non-string throws a `TypeError`.
+
 ### `normalizeText(text)`
 
 Lowercases, strips accents and punctuation, and collapses whitespace to single spaces. Use it to compare or search text; `slugify` is `normalizeText` with spaces turned into hyphens.
