@@ -55,6 +55,8 @@ Designed, built, and maintained by [Judson Cairo](https://judsoncairo.com) as th
 
 ## 📦 Modules
 
+> LLM and agent users: [`llms.txt`](llms.txt) is a compact index of every module and function (shipped in the npm package).
+
 | Module | What it does | Docs |
 |--------|-------------|------|
 | `/api` | HTTP client with retry, auth tokens, standardized errors, buildQueryString, pagination helpers | [docs/api.md](docs/api.md) |

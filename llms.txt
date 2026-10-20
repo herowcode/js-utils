@@ -1,0 +1,83 @@
+# @herowcode/utils
+
+> Tree-shakable TypeScript utilities for Node.js and browsers (ESM + CJS, `sideEffects: false`). Import from the subpath of the module you need; check this file before writing a helper by hand.
+
+Install: `pnpm add @herowcode/utils`. Optional peers: `pino`, `pino-pretty` (only for `/logger` on Node).
+
+## Import rules
+
+- Root `@herowcode/utils` re-exports only `array`, `function` and `string`. Every other module is subpath-only: `import { retry } from "@herowcode/utils/async"`.
+- `/files`, `/logger` and `/youtube` resolve to a browser or Node build through export conditions; the same import works in both, and unsupported calls fall back safely.
+- Full per-function docs: `docs/<module>.md` in the repo (https://github.com/herowcode/js-utils/tree/main/docs). Migration guide for replacing local copies: `docs/replacing-local-copies.md`.
+
+## Modules
+
+### array — `@herowcode/utils/array` (also root)
+chunk, groupBy, keyBy, shuffle, sumBy, unique
+
+### async — `@herowcode/utils/async`
+- retry: retry an async fn with backoff
+- backoffDelay: compute a backoff delay
+- parseRetryAfterMs: parse a `Retry-After` header into ms
+- sleep (abortable), withTimeout
+- createConcurrencyLimiter, createSingleFlight (dedupe in-flight calls), mapInChunks
+- clampTimerDelay, MAX_TIMER_DELAY: keep `setTimeout` delays in range
+
+### auth — `@herowcode/utils/auth`
+decodeJWT, getJWTExp, isJWTExpired, isJWTExpiring, extractBearerToken (no signature verification)
+
+### api — `@herowcode/utils/api`
+apiClient (fetch wrapper with retry, timeout, redirect and Retry-After handling), buildQueryString, buildPageMeta, getOffset (pagination helpers)
+
+### br — `@herowcode/utils/br` (Brazil)
+formatCPF, formatCNPJ, formatCEP, isValidCPF, isValidCNPJ
+
+### crypto — `@herowcode/utils/crypto` (Web Crypto)
+sha256Hex, hmacSha256Hex, verifyHmacSignature, safeEqual (constant-time compare), generateOpaqueToken
+
+### date — `@herowcode/utils/date`
+- dayjs (preconfigured) plus setDayjsGlobalIntl / getDayjsGlobalIntl / resetDayjsGlobalIntl / withDayjsGlobalIntl
+- formatDate, getRelativeTime, parseTimeSpent
+- getDateInUTC, getCurrentDateInUTC, fixTimezoneOffset
+- dayjs-free ISO-date helpers: addDaysISO, diffDaysISO, getTodayISODate, toISODate, parseISODateLocal, getZonedHour, getDatePartsInTimeZone
+
+### env — `@herowcode/utils/env`
+requireEnv (throws if missing), optionalEnv, parseBoolean, readEnv, resolveEnv
+
+### errors — `@herowcode/utils/errors`
+- HttpError and subclasses: BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, TooManyRequestsError
+- isHttpError, getErrorMessage, getErrorStatus, getRootCause, walkCause
+- isTransientStatus, isTransientNetworkError, TRANSIENT_STATUS_CODES: decide whether to retry
+
+### files — `@herowcode/utils/files`
+formatBytes, toCSV, safeStorage (never-throwing localStorage/sessionStorage), compressImage, copyToClipboard, downloadBlob, downloadUrl, fileExists, fileDelete (Node fs)
+
+### function — `@herowcode/utils/function` (also root)
+debounce, throttle, tryCatch, tryCatchResult (errors as values), safeJsonParse, isBrowser, isServer
+
+### http — `@herowcode/utils/http` (fetch/Response based, edge-safe)
+fetchJson, fetchWithTimeout, jsonResponse, corsHeaders, preflight
+
+### logger — `@herowcode/utils/logger`
+createLogger (pino on Node, console in browser, secrets redacted), createPinoInstance (Node), redactDeep, redactSecrets
+
+### number — `@herowcode/utils/number`
+formatNumber, formatCurrency, formatPercent, percentOf, toNumber, parseLocaleNumber
+
+### phone — `@herowcode/utils/phone`
+parsePhone, formatPhone, normalizePhone, onlyDigits, getBRMobileVariants, buildWhatsAppLink
+
+### string — `@herowcode/utils/string` (also root)
+- case: camelCase, kebabCase, snakeCase, capitalize, toSentenceCase
+- text: slugify, truncate, pluralize, getInitials, normalizeText, removeAccents
+- markup: escapeHtml, removeHtmlTags, markdownToText, escapeRegExp
+- time strings: formatSecondsToHMS, formatSecondsToFragment, formatHMSToSeconds, formatStringToTime
+
+### youtube — `@herowcode/utils/youtube`
+extractYouTubeId, generateYoutubeURL, validateYoutubeLink, getYoutubeVideoInfo, getYoutubeThumbnail, getYoutubeVideoDuration
+
+## Conventions
+
+- Interfaces are `I*`, type aliases `T*`, enums `E*`.
+- Misconfiguration errors carry a `HEROW_*` code and a docs link (`docs/errors.md`).
+- Prefer these helpers over local copies of retry, sleep, HTTP errors, env parsing, HMAC, JWT decoding, phone/CPF/CNPJ formatting and similar.
