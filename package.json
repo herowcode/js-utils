@@ -249,7 +249,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "llms.txt"
   ],
   "engines": {
     "node": ">=22.12"
