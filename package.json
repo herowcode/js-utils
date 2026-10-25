@@ -298,7 +298,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@biomejs/biome": "2.1.4",
+    "@biomejs/biome": "2.6.2",
     "@changesets/cli": "3.0.3",
     "@edge-runtime/vm": "5.0.0",
     "@size-limit/preset-small-lib": "14.2.0",
